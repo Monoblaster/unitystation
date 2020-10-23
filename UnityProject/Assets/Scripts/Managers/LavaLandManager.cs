@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEditor;
 using Random = UnityEngine.Random;
 using Objects.Science;
+using TileManagement;
 
 namespace Systems.Scenes
 {
@@ -144,12 +145,14 @@ namespace Systems.Scenes
 			{
 				var SO = GetCorrectSOFromSize(keyValuePair.Value);
 				if (SO == null) continue;
+				if(keyValuePair.Key == null) continue;
 
 				dataList = SO.AreaPrefabData.ToList();
 
 				foreach (var data in dataList.Shuffle())
 				{
 					if (data.isSpecialSite && !keyValuePair.Key.allowSpecialSites) continue;
+					if (data.AreaPrefab == null) continue;
 
 					//Prefab cache
 					if (PrefabsUsed.ContainsKey(data.AreaPrefab))

@@ -15,7 +15,9 @@ MonoBehaviour:
   categoryList:
   - name: Offensive
     description: Spells and items geared towards debilitating and destroying.
-    entryList: []
+    entryList:
+    - {fileID: 11400000, guid: 5f87294e709ac064080fb911d6c320e4, type: 2}
+    - {fileID: 11400000, guid: 2e06a74590a147e4eaeb08b46d3ac321, type: 2}
   - name: Defensive
     description: Spells and items geared towards improving your survivability or
       reducing foes' ability to attack.
@@ -26,6 +28,7 @@ MonoBehaviour:
       It is a good idea to take at least one.
     entryList:
     - {fileID: 11400000, guid: 57f0e48646c8b324e8e3390680ea67eb, type: 2}
+    - {fileID: 11400000, guid: b8ff8a15a9e1ff3489e86253be44a30f, type: 2}
   - name: Assistance
     description: Spells and items geared towards bringing in outside forces to aid
       you or improving upon your other items and abilities.

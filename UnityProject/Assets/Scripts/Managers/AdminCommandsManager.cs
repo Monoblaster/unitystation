@@ -62,14 +62,14 @@ namespace AdminCommands
 
 			string msg;
 
-			if (Chat.OOCMute)
+			if (Chat.Instance.OOCMute)
 			{
-				Chat.OOCMute = false;
+				Chat.Instance.OOCMute = false;
 				msg = "OOC has been unmuted";
 			}
 			else
 			{
-				Chat.OOCMute = true;
+				Chat.Instance.OOCMute = true;
 				msg = "OOC has been muted";
 			}
 
@@ -120,6 +120,8 @@ namespace AdminCommands
 		public void CmdEndRound(string adminId, string adminToken)
 		{
 			if (IsAdmin(adminId, adminToken) == false) return;
+
+			GameManager.Instance.RoundEndTime = 5; // Quick round end when triggered by admin.
 
 			VideoPlayerMessage.Send(VideoType.RestartRound);
 			GameManager.Instance.EndRound();
@@ -350,6 +352,7 @@ namespace AdminCommands
 
 		#endregion
 
+		#region Profiling
 
 		public bool runningProfile = false;
 
@@ -368,6 +371,9 @@ namespace AdminCommands
 			Profiler.logFile = "Profiles/" + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
 			Profiler.enableBinaryLog = true;
 			Profiler.enabled = true;
+
+			UpdateManager.Instance.Profile = true;
+
 			StartCoroutine(RunPorfile(frameCount));
 		}
 
@@ -383,6 +389,8 @@ namespace AdminCommands
 			Profiler.enabled = false;
 			Profiler.enableBinaryLog = true;
 			Profiler.logFile = "";
+
+			UpdateManager.Instance.Profile = false;
 
 			ProfileMessage.SendToApplicable();
 		}
@@ -409,6 +417,7 @@ namespace AdminCommands
 			ProfileMessage.SendToApplicable();
 		}
 
+		#endregion
 	}
 
 	/// <summary>
@@ -642,6 +651,50 @@ namespace AdminCommands
 				AdminId = adminId,
 				AdminToken = adminToken,
 				GenericBool = genericBool,
+				Action = action
+			};
+			msg.Send();
+			return msg;
+		}
+	}
+
+	/// <summary>
+	/// Generic net message with verification parameters, and a generic int parameter.
+	/// </summary>
+	public class ServerCommandVersionSixMessageClient : ClientMessage
+	{
+		public string AdminId;
+		public string AdminToken;
+		public int GenericInt;
+		public string Action;
+
+		public override void Process()
+		{
+			if (AdminCommandsManager.IsAdmin(AdminId, AdminToken) == false)
+				return;
+
+			object[] paraObject =
+			{
+				AdminId,
+				AdminToken,
+				GenericInt
+			};
+
+			var instance = AdminCommandsManager.Instance;
+
+			//server stuff
+			if (instance == null) return;
+
+			instance.GetType().GetMethod(Action)?.Invoke(instance, paraObject);
+		}
+
+		public static ServerCommandVersionSixMessageClient Send(string adminId, string adminToken, int genericInt, string action)
+		{
+			ServerCommandVersionSixMessageClient msg = new ServerCommandVersionSixMessageClient
+			{
+				AdminId = adminId,
+				AdminToken = adminToken,
+				GenericInt = genericInt,
 				Action = action
 			};
 			msg.Send();

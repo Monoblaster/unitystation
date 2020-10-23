@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using ScriptableObjects.Systems.Spells;
 
 namespace ScriptableObjects.Items.SpellBook
 {
@@ -11,14 +12,12 @@ namespace ScriptableObjects.Items.SpellBook
 	public sealed class SpellBookSpell : SpellBookEntry
 	{
 		[SerializeField]
-		private int cooldown = default;
-		[SerializeField]
-		private string incantation = default;
-		[SerializeField]
-		private SpellData spell = default;
-		
-		public int Cooldown => cooldown;
-		public string Incantation => incantation;
+		private WizardSpellData spell = default;
+
+		public string Name => spell.Name;
+		public float Cooldown => spell.CooldownTime;
+		public string Incantation => spell.InvocationMessage;
+		public bool RequiresWizardGarb => spell.RequiresWizardGarb;
 		public SpellData Spell => spell;
 	}
 }

@@ -26,19 +26,22 @@ namespace UI.SpellBook
 			this.bookGUI = bookGUI;
 			this.entry = entry;
 
-			spellLabel.SetValueServer(entry.Name);
 			costLabel.SetValueServer($"Cost: {entry.Cost}");
 			descriptionLabel.SetValueServer(entry.Description);
-			noteLabel.SetValueServer(entry.Note);
 
 			if (entry is SpellBookSpell spellEntry)
 			{
+				spellLabel.SetValueServer(spellEntry.Name);
 				cooldownLabel.SetValueServer($"Cooldown: {spellEntry.Cooldown}");
+				noteLabel.SetValueServer(
+						$"{(spellEntry.RequiresWizardGarb ? "Requires wizard garb" : "Can be cast without wizard garb")} {spellEntry.Note}");
 				buttonLabel.SetValueServer("Learn");
 			}
-			else if (entry is SpellBookArtifact)
+			else if (entry is SpellBookArtifact artifactEntry)
 			{
+				spellLabel.SetValueServer(artifactEntry.Name);
 				cooldownLabel.SetValueServer("");
+				noteLabel.SetValueServer(artifactEntry.Note);
 				buttonLabel.SetValueServer("Summon");
 			}
 		}

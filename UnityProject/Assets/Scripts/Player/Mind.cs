@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using UnityEngine;
 using Mirror;
 using Antagonists;
+using Systems.Spells;
 using Object = UnityEngine.Object;
 
 /// <summary>
@@ -200,7 +201,8 @@ public class Mind
 	public void ShowObjectives()
 	{
 		if (!IsAntag) return;
-		Chat.AddExamineMsgFromServer(body.gameObject, Antag.GetObjectivesForPlayer());
+
+		Chat.AddExamineMsgFromServer(GetCurrentMob(), Antag.GetObjectivesForPlayer());
 	}
 
 	/// <summary>

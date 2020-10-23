@@ -124,7 +124,6 @@ namespace Weapons
 		/// </summary>
 		public float MaxRecoilVariance;
 
-		//TODO: make this dependent on the mag used/projectile fired
 		/// <summary>
 		/// The traveling speed for this weapons projectile
 		/// </summary>
@@ -186,7 +185,7 @@ namespace Weapons
 			UpdateManager.Remove(CallbackType.UPDATE, UpdateMe);
 		}
 
-		public void OnSpawnServer(SpawnInfo info)
+		public virtual void OnSpawnServer(SpawnInfo info)
 		{
 			Init();
 		}
@@ -287,10 +286,7 @@ namespace Weapons
 				}
 				else if (interaction.MouseButtonState == MouseButtonState.PRESS)
 				{
-					if (currentBurstCount != 0)
-					{
-						currentBurstCount = 0;
-					}
+					currentBurstCount = 0;
 					return true;
 				}
 				else
@@ -349,7 +345,7 @@ namespace Weapons
 
 
 
-		public bool Interact(HandActivate interaction)
+		public virtual bool Interact(HandActivate interaction)
 		{
 			//try ejecting the mag if external
 			if (CurrentMagazine != null && allowMagazineRemoval && !MagInternal)
@@ -380,7 +376,7 @@ namespace Weapons
 			return false;
 		}
 
-		public string Examine(Vector3 pos)
+		public virtual string Examine(Vector3 pos)
 		{
 			return WeaponType + " - Fires " + ammoType + " ammunition (" + (CurrentMagazine != null ? (CurrentMagazine.ServerAmmoRemains.ToString() + " rounds loaded in magazine") : "It's empty!") + ")";
 		}
@@ -439,6 +435,11 @@ namespace Weapons
 			}
 			if (queuedLoadMagNetID != NetId.Invalid && queuedShots.Count == 0)
 			{
+				if (CurrentMagazine == null)
+				{
+					Logger.LogWarning($"Why is {nameof(CurrentMagazine)} null for {this}?");
+				}
+
 				//done processing shot queue, perform the reload, causing all clients and server to update their version of this Weapon
 				//due to the syncvar hook
 				if (MagInternal)
@@ -627,7 +628,7 @@ namespace Weapons
 
 			if (CurrentMagazine == null)
 			{
-				Logger.Log("Why is CurrentMagazine null on this client?");
+				Logger.LogWarning($"Why is {nameof(CurrentMagazine)} null for {this} on this client?");
 			}
 			else
 			{

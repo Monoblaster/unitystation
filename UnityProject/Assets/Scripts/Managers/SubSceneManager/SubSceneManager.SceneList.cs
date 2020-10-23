@@ -231,7 +231,7 @@ public partial class SubSceneManager
 				SceneName = syndicateData.SyndicateSceneName,
 				SceneType = SceneType.AdditionalScenes
 			});
-
+			PokeClientSubScene.SendToAll( syndicateData.SyndicateSceneName);
 			yield break;
 		}
 
@@ -244,7 +244,7 @@ public partial class SubSceneManager
 			SceneName = pickedMap,
 			SceneType = SceneType.AdditionalScenes
 		});
-
+		PokeClientSubScene.SendToAll( pickedMap);
 		SyndicateLoaded = true;
 	}
 
@@ -261,6 +261,10 @@ public partial class SubSceneManager
 			SceneName = pickedScene,
 			SceneType = SceneType.AdditionalScenes
 		});
+		
+		PokeClientSubScene.SendToAll(pickedScene);
+
+		WizardLoaded = true;
 	}
 
 	#endregion

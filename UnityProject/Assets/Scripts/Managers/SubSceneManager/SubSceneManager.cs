@@ -76,6 +76,30 @@ public partial class SubSceneManager : NetworkBehaviour
 			Instance.AddObserverToAllObjects(connectedPlayer.Connection, sceneContext);
 		}
 	}
+
+	//TODO Update mirror
+	public static void ManuallyLoadScene(string ToLoad)
+	{
+		Instance.StartCoroutine(Instance.WaitLoad(ToLoad));
+	}
+
+	IEnumerator WaitLoad(string ToLoad)
+	{
+		while (clientIsLoadingSubscene)
+		{
+			yield return null;
+		}
+		foreach (var ReadyLoaded in Instance.clientLoadedSubScenes)
+		{
+			if (ReadyLoaded.SceneName == ToLoad)
+			{
+				yield break;
+			}
+		}
+		clientIsLoadingSubscene = true;
+		yield return Instance.StartCoroutine(Instance.LoadSubScene(ToLoad));
+		clientIsLoadingSubscene = false;
+	}
 }
 
 public enum SceneType
@@ -112,7 +136,9 @@ public struct SceneInfo : IEquatable<SceneInfo>
 }
 
 [System.Serializable]
-public class ScenesSyncList : SyncList<SceneInfo>{}
+public class ScenesSyncList : SyncList<SceneInfo>
+{
+}
 
 public class SubsceneLoadTimer
 {

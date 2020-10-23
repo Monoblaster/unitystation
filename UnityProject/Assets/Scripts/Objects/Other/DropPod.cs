@@ -78,17 +78,25 @@ namespace Objects
 			if (isLanding)
 			{
 				StartCoroutine(RunLandingSequence());
+				StartCoroutine(DelayLandingSFX());
 			}
 		}
 
 		private IEnumerator RunLandingSequence()
 		{
+			GameObject targetReticule = landingSpriteHandler.gameObject;
+			GameObject dropPod = baseSpriteHandler.gameObject;
+
+			// Initialise target reticule for animating.
+			targetReticule.LeanAlpha(0.25f, 0);
+			targetReticule.transform.localScale = Vector3.one * 1.5f;
+
 			// Initialise drop pod sprite to the start of falling animation.
 			baseSpriteHandler.ChangeSprite((int)BaseSprite.Falling, false);
-			baseSpriteHandler.gameObject.transform.localScale = Vector3.zero;
-			Vector3 localPos = baseSpriteHandler.gameObject.transform.localPosition;
+			dropPod.transform.localScale = Vector3.zero;
+			Vector3 localPos = dropPod.transform.localPosition;
 			localPos.y = DROP_HEIGHT;
-			baseSpriteHandler.gameObject.transform.localPosition = localPos;
+			dropPod.transform.localPosition = localPos;
 			registerObject.Passable = true;
 
 			// ClosetControl initialises, redisplaying the door, so wait a frame...
@@ -96,8 +104,14 @@ namespace Objects
 			doorSpriteHandler.PushClear(false);
 
 			// Begin the drop animation.
-			baseSpriteHandler.gameObject.LeanScale(Vector3.one, TRAVEL_TIME);
-			baseSpriteHandler.gameObject.LeanMoveLocalY(0, TRAVEL_TIME);
+			dropPod.LeanScale(Vector3.one, TRAVEL_TIME);
+			dropPod.LeanMoveLocalY(0, TRAVEL_TIME);
+
+			// Animate the target reticule.
+			targetReticule.LeanScale(Vector3Int.one, TRAVEL_TIME / 2);
+			targetReticule.LeanRotateZ(-270, TRAVEL_TIME);
+			targetReticule.LeanAlpha(0.75f, TRAVEL_TIME / 2);
+
 			yield return WaitFor.Seconds(TRAVEL_TIME);
 
 			// Swap to stationary drop pod.
@@ -115,6 +129,12 @@ namespace Objects
 			Explosion.StartExplosion(registerObject.LocalPosition, EXPLOSION_STRENGTH, matrixInfo.Matrix);
 
 			isLanding = false;
+		}
+
+		private IEnumerator DelayLandingSFX()
+		{
+			yield return WaitFor.Seconds(TRAVEL_TIME - 1);
+			SoundManager.PlayAtPosition("RocketLand", WorldPosition, sourceObj: gameObject);
 		}
 	}
 }

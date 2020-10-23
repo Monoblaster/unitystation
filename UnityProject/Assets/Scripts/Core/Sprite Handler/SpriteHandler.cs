@@ -46,6 +46,9 @@ public class SpriteHandler : MonoBehaviour
 	private Color? setColour = null;
 
 	[SerializeField] private List<Color> palette = new List<Color>();
+	public List<Color> Palette => palette;
+
+	private bool PaletteSet = false;
 
 	private bool Initialised;
 
@@ -143,7 +146,7 @@ public class SpriteHandler : MonoBehaviour
 		cataloguePage = SubCataloguePage;
 		if (isSubCatalogueChanged)
 		{
-			SetSpriteSO(SubCatalogue[SubCataloguePage], Network: true);
+			SetSpriteSO(SubCatalogue[SubCataloguePage]);
 		}
 		else
 		{
@@ -310,6 +313,15 @@ public class SpriteHandler : MonoBehaviour
 
 	public void SetPaletteOfCurrentSprite(List<Color> newPalette, bool Network = true)
 	{
+		bool paletted = isPaletted();
+
+		Debug.Assert(!(paletted && newPalette == null), "Paletted sprites should never have palette set to null");
+
+		if (!paletted)
+		{
+			newPalette = null;
+		}
+
 		palette = newPalette;
 		PushTexture(false);
 		if (Network)
@@ -394,7 +406,7 @@ public class SpriteHandler : MonoBehaviour
 				Logger.LogError("Was unable to find A NetworkBehaviour for ",
 					Category.SpriteHandler);
 				return;
-			};
+			}
 
 			NetworkIdentity = NetID.netIdentity;
 			if (NetworkIdentity == null)
@@ -544,29 +556,50 @@ public class SpriteHandler : MonoBehaviour
 
 	private void SetImageSprite(Sprite value)
 	{
+		List<Color> paletteOrNull;
 		if (spriteRenderer != null)
 		{
 			spriteRenderer.enabled = true;
 			spriteRenderer.sprite = value;
-			MaterialPropertyBlock block = new MaterialPropertyBlock();
-			spriteRenderer.GetPropertyBlock(block);
-			var palette = getPaletteOrNull();
-			if (palette != null && palette.Count == 8)
+			if (isPaletted() && PaletteSet == false)
 			{
-				List<Vector4> pal = palette.ConvertAll<Vector4>((Color c) => new Vector4(c.r, c.g, c.b, c.a));
-				block.SetVectorArray("_ColorPalette", pal);
-				block.SetInt("_IsPaletted", 1);
+				PaletteSet = true;
+				var palette = getPaletteOrNull();
+				if (palette != null && palette.Count == 8)
+				{
+					MaterialPropertyBlock block = new MaterialPropertyBlock();
+					spriteRenderer.GetPropertyBlock(block);
+					List<Vector4> pal = palette.ConvertAll<Vector4>((Color c) => new Vector4(c.r, c.g, c.b, c.a));
+					block.SetVectorArray("_ColorPalette", pal);
+					block.SetInt("_IsPaletted", 1);
+					spriteRenderer.SetPropertyBlock(block);
+				}
 			}
-			else
+			else if (PaletteSet)
 			{
+				PaletteSet = false;
+				MaterialPropertyBlock block = new MaterialPropertyBlock();
+				spriteRenderer.GetPropertyBlock(block);
 				block.SetInt("_IsPaletted", 0);
+				spriteRenderer.SetPropertyBlock(block);
 			}
-
-			spriteRenderer.SetPropertyBlock(block);
 		}
 		else if (image != null)
 		{
 			image.sprite = value;
+			paletteOrNull = getPaletteOrNull();
+
+			if (paletteOrNull != null && paletteOrNull.Count == 8)
+			{
+				List<Vector4> pal = paletteOrNull.ConvertAll((c) => new Vector4(c.r, c.g, c.b, c.a));
+				image.material.SetVectorArray("_ColorPalette", pal);
+				image.material.SetInt("_IsPaletted", 1);
+			}
+			else
+			{
+				image.material.SetInt("_IsPaletted", 0);
+			}
+
 			if (value == null)
 			{
 				image.enabled = false;
@@ -613,6 +646,11 @@ public class SpriteHandler : MonoBehaviour
 	{
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		image = GetComponent<Image>();
+		if (image != null)
+		{
+			// unity doesn't support property blocks on ui renderers, so this is a workaround
+			image.material = Instantiate(image.material);
+		}
 	}
 
 	private void TryInit()
@@ -679,18 +717,20 @@ public class SpriteHandler : MonoBehaviour
 
 	public void UpdateMe()
 	{
-		timeElapsed += Time.deltaTime;
-		if (PresentSpriteSet.Variance.Count > variantIndex &&
-		    timeElapsed >= PresentFrame.secondDelay)
+		timeElapsed += UpdateManager.CashedDeltaTime;
+		if (timeElapsed >= PresentFrame.secondDelay)
 		{
-			animationIndex++;
-			if (animationIndex >= PresentSpriteSet.Variance[variantIndex].Frames.Count)
+			if (PresentSpriteSet.Variance.Count > variantIndex)
 			{
-				animationIndex = 0;
+				animationIndex++;
+				if (animationIndex >= PresentSpriteSet.Variance[variantIndex].Frames.Count)
+				{
+					animationIndex = 0;
+				}
+				var frame = PresentSpriteSet.Variance[variantIndex].Frames[animationIndex];
+				SetSprite(frame);
 			}
 
-			var frame = PresentSpriteSet.Variance[variantIndex].Frames[animationIndex];
-			SetSprite(frame);
 		}
 
 		if (!isAnimation)

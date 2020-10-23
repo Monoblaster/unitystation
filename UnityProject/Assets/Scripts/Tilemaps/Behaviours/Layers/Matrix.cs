@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Tilemaps;
 using Systems.Atmospherics;
+using TileManagement;
 
 /// <summary>
 /// Behavior which indicates a matrix - a contiguous grid of tiles.
@@ -15,6 +16,10 @@ using Systems.Atmospherics;
 /// </summary>
 public class Matrix : MonoBehaviour
 {
+	private List<TilemapDamage> tilemapsDamage = new List<TilemapDamage>();
+
+	public List<TilemapDamage> TilemapsDamage => tilemapsDamage;
+
 	private MetaTileMap metaTileMap;
 	public MetaTileMap MetaTileMap => metaTileMap ? metaTileMap : metaTileMap = GetComponent<MetaTileMap>();
 
@@ -88,7 +93,7 @@ public class Matrix : MonoBehaviour
 		MatrixMove = GetComponentInParent<MatrixMove>();
 		tileChangeManager = GetComponentInParent<TileChangeManager>();
 		underFloorLayer = GetComponentInChildren<UnderFloorLayer>();
-
+		tilemapsDamage = GetComponentsInChildren<TilemapDamage>().ToList();
 		OnEarthquake.AddListener((worldPos, magnitude) =>
 		{
 			var cellPos = metaTileMap.WorldToCell(worldPos);
@@ -140,10 +145,10 @@ public class Matrix : MonoBehaviour
 	}
 
 	public bool IsPassableAt(Vector3Int position, bool isServer, bool includingPlayers = true,
-		List<LayerType> excludeLayers = null, List<TileType> excludeTiles = null)
+		List<LayerType> excludeLayers = null, List<TileType> excludeTiles = null, GameObject context = null, bool ignoreObjects = false)
 	{
-		return IsPassableAt(position, position, isServer, includingPlayers: includingPlayers,
-			excludeLayers: excludeLayers, excludeTiles: excludeTiles);
+		return IsPassableAt(position, position, isServer, context: context, includingPlayers: includingPlayers,
+			excludeLayers: excludeLayers, excludeTiles: excludeTiles, ignoreObjects: ignoreObjects);
 	}
 
 	/// <summary>
@@ -163,11 +168,11 @@ public class Matrix : MonoBehaviour
 	/// <param name="context">Is excluded from passable check</param>
 	/// <returns></returns>
 	public bool IsPassableAt(Vector3Int origin, Vector3Int position, bool isServer,
-		CollisionType collisionType = CollisionType.Player, bool includingPlayers = true, GameObject context = null,
-		List<LayerType> excludeLayers = null, List<TileType> excludeTiles = null)
+			CollisionType collisionType = CollisionType.Player, bool includingPlayers = true, GameObject context = null,
+			List<LayerType> excludeLayers = null, List<TileType> excludeTiles = null, bool ignoreObjects = false)
 	{
 		return MetaTileMap.IsPassableAt(origin, position, isServer, collisionType: collisionType,
-			inclPlayers: includingPlayers, context: context, excludeLayers: excludeLayers, excludeTiles: excludeTiles);
+			inclPlayers: includingPlayers, context: context, excludeLayers: excludeLayers, excludeTiles: excludeTiles, ignoreObjects: ignoreObjects);
 	}
 
 	public bool IsAtmosPassableAt(Vector3Int position, bool isServer)
@@ -187,12 +192,12 @@ public class Matrix : MonoBehaviour
 
 	public bool IsTableAt(Vector3Int position, bool isServer)
 	{
-		return MetaTileMap.IsTileTypeAt(position, isServer, TileType.Table);
+		return MetaTileMap.IsTableAt(position);
 	}
 
 	public bool IsWallAt(Vector3Int position, bool isServer)
 	{
-		return MetaTileMap.HasTile(position, LayerType.Walls, isServer);
+		return MetaTileMap.HasTile(position, LayerType.Walls);
 	}
 
 	public bool IsEmptyAt(Vector3Int position, bool isServer)
@@ -264,6 +269,12 @@ public class Matrix : MonoBehaviour
 		(isServer ? ServerObjects : ClientObjects).ForEachSafe(action, localPosition);
 	}
 
+
+	public IEnumerable<RegisterTile> GetRegisterTile(Vector3Int localPosition, bool isServer)
+	{
+		return (isServer ? ServerObjects : ClientObjects).Get(localPosition);
+	}
+
 	public IEnumerable<T> Get<T>(Vector3Int localPosition, bool isServer)
 	{
 		if (!(isServer ? ServerObjects : ClientObjects).HasObjects(localPosition))
@@ -320,24 +331,24 @@ public class Matrix : MonoBehaviour
 
 	public bool HasTile(Vector3Int position, bool isServer)
 	{
-		return MetaTileMap.HasTile(position, isServer);
+		return MetaTileMap.HasTile(position);
 	}
 
 	public bool IsClearUnderfloorConstruction(Vector3Int position, bool isServer)
 	{
-		if (MetaTileMap.HasTile(position, LayerType.Floors, isServer))
+		if (MetaTileMap.HasTile(position, LayerType.Floors))
 		{
 			return (false);
 		}
-		else if (MetaTileMap.HasTile(position, LayerType.Walls, isServer))
+		else if (MetaTileMap.HasTile(position, LayerType.Walls))
 		{
 			return (false);
 		}
-		else if (MetaTileMap.HasTile(position, LayerType.Windows, isServer))
+		else if (MetaTileMap.HasTile(position, LayerType.Windows))
 		{
 			return (false);
 		}
-		else if (MetaTileMap.HasTile(position, LayerType.Grills, isServer))
+		else if (MetaTileMap.HasTile(position, LayerType.Grills))
 		{
 			return (false);
 		}

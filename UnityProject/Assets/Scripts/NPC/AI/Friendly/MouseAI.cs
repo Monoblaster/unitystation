@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace NPC
+namespace Systems.MobAIs
 {
 	/// <summary>
 	/// AI brain for mice
@@ -12,9 +12,6 @@ namespace NPC
 		[SerializeField, Tooltip("If this mouse get to this mood level, it will start chewing cables")]
 		private int angryMouseLevel = -30;
 
-		[SerializeField, Tooltip("Dead mouse item. Don't eat it, please.")]
-		private GameObject deadMouse = null;
-
 		private MobMood mood;
 
 		protected override void Awake()
@@ -25,12 +22,6 @@ namespace NPC
 
 		protected override void MonitorExtras()
 		{
-			if (health.IsDead)
-			{
-				Spawn.ServerPrefab(deadMouse, gameObject.RegisterTile().WorldPosition);
-				Despawn.ServerSingle(gameObject);
-			}
-
 			base.MonitorExtras();
 			// If mouse not happy, mouse chew cable. Feed mouse. Or kill mouse, that would work too.
 			CheckMoodLevel();
@@ -74,7 +65,7 @@ namespace NPC
 			var matrix = metaTileMap.Layers[LayerType.Underfloor].matrix;
 
 			// Check if the floor plating is exposed.
-			if (metaTileMap.HasTile(registerObject.LocalPosition, LayerType.Floors, true)) return;
+			if (metaTileMap.HasTile(registerObject.LocalPosition, LayerType.Floors)) return;
 
 			// Check if there's cables at this position
 			var cables = matrix.GetElectricalConnections(registerObject.LocalPosition);

@@ -1,5 +1,6 @@
-﻿using ScriptableObjects.Gun;
-using UnityEngine;
+﻿using UnityEngine;
+using NaughtyAttributes;
+using ScriptableObjects.Gun;
 using Weapons.Projectiles.Behaviours;
 
 namespace Weapons.Projectiles
@@ -16,6 +17,12 @@ namespace Weapons.Projectiles
 
 		[SerializeField] private HitProcessor hitProcessor = null;
 		[SerializeField] private LayerMaskData maskData = null;
+
+		[Tooltip("If unchecked, projectile speed will be derived from the source weapon, if available.")]
+		[SerializeField]
+		private bool overrideVelocity = false;
+		[SerializeField, ShowIf(nameof(overrideVelocity)), Range(1, 100)]
+		private int projectileVelocity = 10;
 
 		public LayerMaskData MaskData => maskData;
 
@@ -54,7 +61,12 @@ namespace Weapons.Projectiles
 			var startPosition = new Vector3(direction.x, direction.y, thisTransform.position.z) * 0.2f;
 			thisTransform.position += startPosition;
 
-			movingProjectile.SetUpBulletTransform(direction, fromWeapon.ProjectileVelocity);
+			if (overrideVelocity == false && fromWeapon != null)
+			{
+				projectileVelocity = fromWeapon.ProjectileVelocity;
+			}
+
+			movingProjectile.SetUpBulletTransform(direction, projectileVelocity);
 
 			foreach (var behaviour in behavioursOnShoot)
 			{
@@ -74,7 +86,7 @@ namespace Weapons.Projectiles
 			{
 				if (behaviour.OnMove(distanceTraveled))
 				{
-					DespawnThis(new RaycastHit2D(), worldPosition);
+					DespawnThis(new MatrixManager.CustomPhysicsHit(), worldPosition);
 					return false;
 				}
 			}
@@ -86,13 +98,13 @@ namespace Weapons.Projectiles
 		/// Main method for processing ray cast hit
 		/// </summary>
 		/// <param name="hit"></param>
-		public void ProcessRaycastHit(RaycastHit2D hit)
+		public void ProcessRaycastHit(MatrixManager.CustomPhysicsHit hit)
 		{
 			if (IsHitValid(hit) == false) return;
 
 			if(hitProcessor.ProcessHit(hit, behavioursOnBulletHit) == false) return;
 
-			DespawnThis(hit, hit.point);
+			DespawnThis(hit, hit.HitWorld);
 		}
 
 		/// <summary>
@@ -101,11 +113,11 @@ namespace Weapons.Projectiles
 		/// </summary>
 		/// <param name="hit"></param>
 		/// <returns></returns>
-		private bool IsHitValid(RaycastHit2D hit)
+		private bool IsHitValid(MatrixManager.CustomPhysicsHit  hit)
 		{
-			if (hit.collider == null) return false;
+			if (hit.ItHit == false) return false;
 			if (WillHurtShooter) return true;
-			if (hit.collider.gameObject == shooter) return false;
+			if (hit.CollisionHit.GameObject == shooter) return false;
 			return true;
 		}
 
@@ -113,13 +125,24 @@ namespace Weapons.Projectiles
 		/// Despawn bullet and call all
 		/// on despawn behaviours
 		/// </summary>
-		private void DespawnThis(RaycastHit2D hit, Vector2 point)
+		private void DespawnThis(MatrixManager.CustomPhysicsHit  hit, Vector2 point)
 		{
 			foreach (var behaviour in behavioursOnBulletDespawn)
 			{
 				behaviour.OnDespawn(hit, point);
 			}
-			Despawn.ClientSingle(gameObject);
+
+			if (CustomNetworkManager.IsServer)
+			{
+				Despawn.ServerSingle(gameObject);
+			}
+			else
+			{
+				if (Despawn.ClientSingle(gameObject).Successful == false)
+				{
+					Destroy(gameObject);
+				}
+			}
 		}
 
 		private void OnDisable()
