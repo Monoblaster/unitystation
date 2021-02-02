@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Items;
 using UnityEngine;
 using Mirror;
 using Objects.Atmospherics;
@@ -14,7 +15,11 @@ public class Equipment : NetworkBehaviour
 	public ItemStorage ItemStorage { get; private set; }
 
 	public bool IsInternalsEnabled;
+
 	private ItemSlot maskSlot;
+	private ItemSlot headSlot;
+	private ItemSlot idSlot;
+
 	private Dictionary<NamedSlot, ClothingItem> clothingItems;
 
 	[NonSerialized]
@@ -38,6 +43,9 @@ public class Equipment : NetworkBehaviour
 		}
 
 		maskSlot = ItemStorage.GetNamedItemSlot(NamedSlot.mask);
+		headSlot = ItemStorage.GetNamedItemSlot(NamedSlot.head);
+		idSlot = ItemStorage.GetNamedItemSlot(NamedSlot.id);
+
 		InitInternals();
 	}
 
@@ -136,29 +144,41 @@ public class Equipment : NetworkBehaviour
 		return obscuredSlots.HasFlag(ItemSlot.GetFlaggedSlot(namedSlot));
 	}
 
+	#region Identity
+
 	/// <summary>
-	/// Gets name and jobtype from ID card worn in ID slot if any.
+	/// Determine whether the identity of the player is obscured by articles of clothing
+	/// with the ObscuresIdentity trait in the head or mask slots.
 	/// </summary>
-	/// <param name="namedSlot"></param>
-	/// <returns></returns>
-	public String GetIdentityFromID()
+	public bool IsIdentityObscured()
 	{
-		IDCard card = null;
-		var tryGetItem = ItemSlot.GetNamed(ItemStorage, NamedSlot.id).Item;
-		if (tryGetItem != null)
-		{
-			card = tryGetItem.GetComponent<IDCard>();
-		}
-		//Logger.Log("ID Card: " + (card != null ? card.ToString() : "null"));
-		if (card != null)
-		{
-			return card.RegisteredName + " " + (card.Occupation ? $" ({card.Occupation.DisplayName})" : "");
-		}
-		else
-		{
-			return "";
-		}
+		// check if any worn mask or headwear obscures identity of the wearer
+		return (maskSlot.IsOccupied && maskSlot.Item.TryGetComponent<ClothingV2>(out var mask) && mask.HidesIdentity)
+				|| (headSlot.IsOccupied && headSlot.Item.TryGetComponent<ClothingV2>(out var headwear) && headwear.HidesIdentity);
 	}
+
+	/// <summary>
+	/// Attempts to get the in-game name of the player based on what is in their ID slot.
+	/// </summary>
+	/// <returns>Unknown if an identity couldn't be found.</returns>
+	public string GetPlayerNameByEquipment()
+	{
+		if (idSlot.IsOccupied && idSlot.Item.TryGetComponent<IDCard>(out var idCard)
+				&& string.IsNullOrEmpty(idCard.RegisteredName) == false)
+		{
+			return idCard.RegisteredName;
+		}
+
+		if (idSlot.IsOccupied && idSlot.Item.TryGetComponent<Items.PDA.PDALogic>(out var pda)
+				&& string.IsNullOrEmpty(pda.RegisteredPlayerName) == false)
+		{
+			return pda.RegisteredPlayerName;
+		}
+
+		return "Unknown";
+	}
+
+	#endregion Identity
 
 	#region Examination
 

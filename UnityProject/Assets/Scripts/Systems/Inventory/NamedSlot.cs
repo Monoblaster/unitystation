@@ -30,6 +30,10 @@ public enum NamedSlot
 	storage01 = 16,
 	storage02 = 17,
 	suitStorage = 18,
+	//special
+	ghostStorage01 = 50,
+	ghostStorage02 = 51,
+	ghostStorage03 = 52,
 
 	//alternative for non-nullable null value
 	none = 2048,
@@ -62,5 +66,5 @@ Handcuffs = 1 << 14,
 ID = 1 << 15,
 Storage01 = 1 << 16,
 storage02 = 1 << 17,
-SuitStorage = 1 << 18
+SuitStorage = 1 << 18,
 }

@@ -8,12 +8,14 @@ namespace Systems.Atmospherics
 {
 	public class FusionReaction : Reaction
 	{
+
+		private static System.Random rnd = new System.Random();
 		public bool Satisfies(GasMix gasMix)
 		{
 			throw new System.NotImplementedException();
 		}
 
-		public float React(ref GasMix gasMix, Vector3 tilePos)
+		public void React(GasMix gasMix, Vector3 tilePos, Matrix matrix)
 		{
 			var oldHeatCap = gasMix.WholeHeatCapacity;
 
@@ -30,6 +32,7 @@ namespace Systems.Atmospherics
 			                                                AtmosDefines.TOROID_VOLUME_BREAKEVEN));
 
 			var gasPower = 0f;
+
 
 			foreach (var gas in Gas.All)
 			{
@@ -66,7 +69,7 @@ namespace Systems.Atmospherics
 			{
 				gasMix.SetGas(Gas.Plasma, initialPlasma);
 				gasMix.SetGas(Gas.CarbonDioxide, initialCarbon);
-				return 0f;
+				return;
 			}
 
 			gasMix.RemoveGas(Gas.Tritium, AtmosDefines.FUSION_TRITIUM_MOLES_USED);
@@ -79,7 +82,7 @@ namespace Systems.Atmospherics
 
 			if (reactionEnergy != 0)
 			{
-				RadiationManager.Instance.RequestPulse(MatrixManager.AtPoint(tilePos.RoundToInt(), true).Matrix, tilePos.RoundToInt(), Mathf.Max((AtmosDefines.FUSION_RAD_COEFFICIENT/instability)+ AtmosDefines.FUSION_RAD_MAX, 0), UnityEngine.Random.Range(Int32.MinValue, Int32.MaxValue));
+				RadiationManager.Instance.RequestPulse(matrix, tilePos.RoundToInt(), Mathf.Max((AtmosDefines.FUSION_RAD_COEFFICIENT/instability)+ AtmosDefines.FUSION_RAD_MAX, 0), rnd.Next(Int32.MinValue, Int32.MaxValue));
 
 				var newHeatCap = gasMix.WholeHeatCapacity;
 				if (newHeatCap > 0.0003f && (gasMix.Temperature <= AtmosDefines.FUSION_MAXIMUM_TEMPERATURE || reactionEnergy <= 0))
@@ -87,8 +90,6 @@ namespace Systems.Atmospherics
 					gasMix.SetTemperature(Mathf.Clamp(((gasMix.Temperature * oldHeatCap + reactionEnergy) / newHeatCap), 2.7f, Single.PositiveInfinity));
 				}
 			}
-
-			return 0f;
 		}
 	}
 }

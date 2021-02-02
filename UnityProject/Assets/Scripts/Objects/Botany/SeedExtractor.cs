@@ -4,24 +4,21 @@ using UnityEngine;
 using UnityEngine.Events;
 using Systems.Electricity;
 using Systems.Botany;
+using Items;
 using Items.Botany;
 
 namespace Objects.Botany
 {
 	[RequireComponent(typeof(HasNetworkTab))]
-	public class SeedExtractor : ManagedNetworkBehaviour, IInteractable<HandApply>, IServerSpawn, IAPCPowered
+	public class SeedExtractor : ManagedNetworkBehaviour, ICheckedInteractable<HandApply>, IServerLifecycle, IAPCPowered
 	{
 		private Queue<GrownFood> foodToBeProcessed;
 		private float processingProgress;
 		private PowerStates currentState = PowerStates.Off;
-		private SeedExtractorUpdateEvent updateEvent = new SeedExtractorUpdateEvent();
-
 
 		//Time it takes to process a single piece of produce
-		private float processingTime = 3f;
-
 		[SerializeField]
-		private RegisterObject registerObject = null;
+		private float processingTime = 3f;
 
 		[Tooltip("Inventory to store food waiting to be processed")]
 		[SerializeField]
@@ -30,7 +27,7 @@ namespace Objects.Botany
 
 		public bool IsProcessing => foodToBeProcessed.Count != 0;
 		public List<SeedPacket> seedPackets;
-		public SeedExtractorUpdateEvent UpdateEvent => updateEvent;
+		public SeedExtractorUpdateEvent UpdateEvent { get; } = new SeedExtractorUpdateEvent();
 		private void Awake()
 		{
 			networkTab = GetComponent<HasNetworkTab>();
@@ -60,13 +57,13 @@ namespace Objects.Botany
 
 			//Add seed packet to dispenser
 			seedPackets.Add(seedPacket);
-			updateEvent.Invoke();
+			UpdateEvent.Invoke();
 
 			//De-spawn processed food
 			Inventory.ServerDespawn(grownFood.gameObject);
 			if (foodToBeProcessed.Count == 0)
 			{
-				Chat.AddLocalMsgToChat("The seed extractor finishes processing", (Vector2Int)registerObject.WorldPosition, this.gameObject);
+				Chat.AddLocalMsgToChat("The seed extractor finishes processing", gameObject);
 			}
 		}
 
@@ -83,11 +80,11 @@ namespace Objects.Botany
 			netTransform.AppearAtPositionServer(spawnPos);
 
 			//Notify chat
-			Chat.AddLocalMsgToChat($"{seedPacket.gameObject.ExpensiveName()} was dispensed from the seed extractor", gameObject.RegisterTile().WorldPosition.To2Int(), gameObject);
+			Chat.AddLocalMsgToChat($"{seedPacket.gameObject.ExpensiveName()} was dispensed from the seed extractor", gameObject);
 
 			//Remove spawned entry from list
 			seedPackets.Remove(seedPacket);
-			updateEvent.Invoke();
+			UpdateEvent.Invoke();
 		}
 
 		/// <summary>
@@ -101,36 +98,62 @@ namespace Objects.Botany
 		}
 
 		/// <summary>
+		/// Ejects all the seed packets when extractor is deconstructed, but only will eject produce you
+		/// put in only if it hasn't been processed by the extractor
+		/// </summary>
+		[Server]
+		public void OnDespawnServer(DespawnInfo info)
+		{
+			Vector3 spawnPos = gameObject.RegisterTile().WorldPositionServer;
+			foreach (var packet in seedPackets)
+			{
+				CustomNetTransform netTransform = packet.GetComponent<CustomNetTransform>();
+				netTransform.AppearAtPosition(spawnPos);
+				netTransform.AppearAtPositionServer(spawnPos);
+			}
+
+		}
+
+		/// <summary>
 		/// Handles placing produce into the seed extractor
 		/// </summary>
 		/// <param name="interaction">contains information about the interaction</param>
 		[Server]
 		public void ServerPerformInteraction(HandApply interaction)
 		{
-			var grownFood = interaction.HandObject?.GetComponent<GrownFood>();
-			if (grownFood != null)
+			if (interaction.HandObject != null)
 			{
+				var grownFood = interaction.HandObject.GetComponent<GrownFood>();
 				var foodAtributes = grownFood.GetComponentInParent<ItemAttributesV2>();
+
 				if (!Inventory.ServerTransfer(interaction.HandSlot, storage.GetBestSlotFor(interaction.HandObject)))
 				{
 					Chat.AddActionMsgToChat(interaction.Performer,
 						$"You try and place the {foodAtributes.ArticleName} into the seed extractor but it is full!",
 						$"{interaction.Performer.name} tries to place the {foodAtributes.ArticleName} into the seed extractor but it is full!");
 					return;
-				}
+			}
 
 				Chat.AddActionMsgToChat(interaction.Performer,
-						$"You place the {foodAtributes.ArticleName} into the seed extractor",
-						$"{interaction.Performer.name} places the {foodAtributes.name} into the seed extractor");
+				$"You place the {foodAtributes.ArticleName} into the seed extractor",
+				$"{interaction.Performer.name} places the {foodAtributes.name} into the seed extractor");
 				if (foodToBeProcessed.Count == 0 && currentState != PowerStates.Off)
 				{
-					Chat.AddLocalMsgToChat("The seed extractor begins processing", (Vector2Int)registerObject.WorldPosition, this.gameObject);
+					Chat.AddLocalMsgToChat("The seed extractor begins processing", gameObject);
 				}
 				foodToBeProcessed.Enqueue(grownFood);
 				return;
 			}
 			//If no interaction happens
 			networkTab.ServerPerformInteraction(interaction);
+		}
+
+		public bool WillInteract(HandApply interaction, NetworkSide side)
+		{
+			return DefaultWillInteract.Default(interaction, side) &&
+			   interaction.TargetObject == gameObject &&
+			   interaction.HandObject != null &&
+			   interaction.HandObject.TryGetComponent<GrownFood>(out _);
 		}
 
 		/// <summary>
@@ -156,12 +179,12 @@ namespace Objects.Botany
 				//Any state other than off
 				if (currentState == PowerStates.Off)
 				{
-					Chat.AddLocalMsgToChat("The seed extractor begins processing", (Vector2Int)registerObject.WorldPosition, this.gameObject);
+					Chat.AddLocalMsgToChat("The seed extractor begins processing", gameObject);
 				}
 				//Off state
 				else if (newState == PowerStates.Off)
 				{
-					Chat.AddLocalMsgToChat("The seed extractor shuts down!", (Vector2Int)registerObject.WorldPosition, this.gameObject);
+					Chat.AddLocalMsgToChat("The seed extractor shuts down!", gameObject);
 				}
 			}
 			currentState = newState;

@@ -68,13 +68,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
-      propertyPath: doorAnimator
-      value: 
-      objectReference: {fileID: -1666584191086447953}
-    - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
-        type: 3}
-      propertyPath: doorType
-      value: 15
+      propertyPath: openSFX
+      value: WinDoor
       objectReference: {fileID: 0}
     - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
@@ -83,13 +78,28 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
-      propertyPath: openSFX
-      value: WinDoor
+      propertyPath: doorType
+      value: 15
       objectReference: {fileID: 0}
+    - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: doorAnimator
+      value: 
+      objectReference: {fileID: -1666584191086447953}
     - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
       propertyPath: isWindowedDoor
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: openSFX.AssetAddress
+      value: Assets/Prefabs/Doors/WinDoor.prefab
+      objectReference: {fileID: 0}
+    - target: {fileID: -304701645951842033, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: closeSFX.AssetAddress
+      value: Assets/Prefabs/Doors/WinDoor.prefab
       objectReference: {fileID: 0}
     - target: {fileID: 2768548541953953568, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
@@ -113,8 +123,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
-      propertyPath: initialIntegrity
-      value: 150
+      propertyPath: Armor.Acid
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: Armor.Fire
+      value: 70
+      objectReference: {fileID: 0}
+    - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: Armor.Laser
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
@@ -128,35 +148,50 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
-      propertyPath: Armor.Laser
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
-        type: 3}
       propertyPath: Armor.Energy
       value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
-      propertyPath: Armor.Fire
-      value: 70
-      objectReference: {fileID: 0}
-    - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
-        type: 3}
-      propertyPath: Armor.Acid
-      value: 100
+      propertyPath: initialIntegrity
+      value: 150
       objectReference: {fileID: 0}
     - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
       propertyPath: Resistances.AcidProof
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4117113471282552717, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: soundOnHit.AssetAddress
+      value: Assets/Prefabs/Effects/GlassHit.prefab
+      objectReference: {fileID: 0}
+    - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: m_Size.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: m_Size.y
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 21300152, guid: f0f465f2e2128495683d9e4cb833c45a,
+      objectReference: {fileID: 21300024, guid: f0f465f2e2128495683d9e4cb833c45a,
         type: 3}
+    - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: m_SortingLayer
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: m_SortingOrder
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
       propertyPath: m_SortingLayerID
@@ -164,13 +199,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
-      propertyPath: m_SortingLayer
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 4732752304642126855, guid: 1291a5cb15d008c41bf0a373403f56b2,
-        type: 3}
-      propertyPath: m_SortingOrder
-      value: 10
+      propertyPath: m_WasSpriteAssigned
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4813822218561835024, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
@@ -181,6 +211,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
+      propertyPath: m_RootOrder
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
@@ -199,6 +234,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
+        type: 3}
       propertyPath: m_LocalRotation.x
       value: 0
       objectReference: {fileID: 0}
@@ -210,16 +250,6 @@ PrefabInstance:
     - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
-        type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
-        type: 3}
-      propertyPath: m_RootOrder
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4817606987798484682, guid: 1291a5cb15d008c41bf0a373403f56b2,
@@ -239,6 +269,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -4969049584947791526, guid: 1291a5cb15d008c41bf0a373403f56b2, type: 3}
+    - {fileID: 44702923082529482, guid: 1291a5cb15d008c41bf0a373403f56b2, type: 3}
+    - {fileID: 8777142490037199562, guid: 1291a5cb15d008c41bf0a373403f56b2, type: 3}
   m_SourcePrefab: {fileID: 100100000, guid: 1291a5cb15d008c41bf0a373403f56b2, type: 3}
 --- !u!1 &3862765748506000581 stripped
 GameObject:

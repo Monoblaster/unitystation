@@ -10,9 +10,10 @@ using System.Linq;
 public class ChatUI : MonoBehaviour
 {
 	public static ChatUI Instance;
-	public GameObject chatInputWindow;
-	public Transform content;
-	public GameObject chatEntryPrefab;
+
+	public GameObject chatInputWindow = default;
+	public Transform content = default;
+	public GameObject chatEntryPrefab = default;
 	public int maxLogLength = 90;
 	[SerializeField] private Text chatInputLabel = null;
 	[SerializeField] private RectTransform channelPanel = null;
@@ -25,9 +26,17 @@ public class ChatUI : MonoBehaviour
 	[SerializeField] private Transform thresholdMarkerBottom = null;
 	[SerializeField] private Transform thresholdMarkerTop = null;
 	[SerializeField] private AdminHelpChat adminHelpChat = null;
+	[SerializeField] private MentorHelpChat mentorHelpChat = null;
+
+	[SerializeField] private PlayerPrayerWindow playerPrayerWindow = null;
+	[SerializeField] private GameObject helpSelectionPanel = null;
+	[SerializeField] private RectTransform safeArenaRect = default;
+
+	public RectTransform SafeArenaRect => safeArenaRect;
 	private bool windowCoolDown = false;
 
 	private ChatChannel selectedChannels;
+	private int selectedVoiceLevel;
 
 	/// <summary>
 	/// Latest parsed input from input field
@@ -244,6 +253,12 @@ public class ChatUI : MonoBehaviour
 		adminHelpChat.AddChatEntry(message);
 	}
 
+	public void AddMentorPrivEntry(string message)
+	{
+		mentorHelpChat.gameObject.SetActive(true);
+		mentorHelpChat.AddChatEntry(message);
+	}
+
 	void SetEntryTransform(GameObject entry)
 	{
 		entry.transform.SetParent(content, false);
@@ -312,12 +327,17 @@ public class ChatUI : MonoBehaviour
 		RefreshChannelPanel();
 	}
 
+	public void OnVoiceLevelChanged(float newLevel)
+	{
+		selectedVoiceLevel = Mathf.RoundToInt(newLevel);
+	}
+
 	public void OnClickSend()
 	{
 		parsedInput = Chat.ParsePlayerInput(InputFieldChat.text, chatContext);
 		if (Chat.IsValidToSend(parsedInput.ClearMessage))
 		{
-			SoundManager.Play("Click01");
+			SoundManager.Play(SingletonSOSounds.Instance.Click01);
 			PlayerSendChat(parsedInput.ClearMessage);
 		}
 
@@ -326,6 +346,11 @@ public class ChatUI : MonoBehaviour
 
 	private void PlayerSendChat(string sendMessage)
 	{
+		if(selectedVoiceLevel == -1)
+			sendMessage = "#" + sendMessage;
+		if(selectedVoiceLevel == 1)
+			sendMessage = sendMessage.ToUpper();
+
 		// Selected channels already masks all unavailable channels in it's get method
 		chatFilter.Send(sendMessage, SelectedChannels);
 		// The filter can be skipped / replaced by calling the following method instead:
@@ -336,7 +361,7 @@ public class ChatUI : MonoBehaviour
 
 	public void OnChatCancel()
 	{
-		SoundManager.Play("Click01");
+		SoundManager.Play(SingletonSOSounds.Instance.Click01);
 		InputFieldChat.text = "";
 		CloseChatWindow();
 	}
@@ -420,7 +445,7 @@ public class ChatUI : MonoBehaviour
 	public void Toggle_ChannelPanel()
 	{
 		showChannels = !showChannels;
-		SoundManager.Play("Click01");
+		SoundManager.Play(SingletonSOSounds.Instance.Click01);
 		if (showChannels)
 		{
 			channelPanel.gameObject.SetActive(true);
@@ -496,7 +521,7 @@ public class ChatUI : MonoBehaviour
 		radioEntry.GetComponentInChildren<Text>().text = channel.ToString();
 		radioEntry.GetComponentInChildren<Button>().onClick.AddListener(() =>
 		{
-			SoundManager.Play("Click01");
+			SoundManager.Play(SingletonSOSounds.Instance.Click01);
 			DisableChannel(channel);
 		});
 		// Add it to a list for easy access later
@@ -564,7 +589,7 @@ public class ChatUI : MonoBehaviour
 
 	public void Toggle_Channel(bool turnOn)
 	{
-		SoundManager.Play("Click01");
+		SoundManager.Play(SingletonSOSounds.Instance.Click01);
 		GameObject curObject = EventSystem.current.currentSelectedGameObject;
 		if (!curObject)
 		{
@@ -781,7 +806,7 @@ public class ChatUI : MonoBehaviour
 		UpdateInputLabel();
 	}
 
-	private ChatChannel GetAvailableChannels()
+	public ChatChannel GetAvailableChannels()
 	{
 		if (PlayerManager.LocalPlayerScript == null)
 		{
@@ -822,6 +847,38 @@ public class ChatUI : MonoBehaviour
 	}
 
 	/// <summary>
+	/// Opens a panel to select whether admin or mentor help is needed
+	/// </summary>
+	public void OnHelpButton()
+	{
+		CloseChatWindow();
+		if (helpSelectionPanel.gameObject.activeInHierarchy)
+		{
+			helpSelectionPanel.gameObject.SetActive(false);
+		}
+		else
+		{
+			helpSelectionPanel.gameObject.SetActive(true);
+		}
+	}
+
+	/// <summary>
+	/// Opens the prayer window to pray to the gods (admins).
+	/// </summary>
+	public void OnPlayerPrayerButton()
+	{
+		CloseChatWindow();
+		if (playerPrayerWindow.gameObject.activeInHierarchy)
+		{
+			playerPrayerWindow.gameObject.SetActive(false);
+		}
+		else
+		{
+			playerPrayerWindow.gameObject.SetActive(true);
+		}
+	}
+
+	/// <summary>
 	/// Opens the admin help window to talk to the admins
 	/// </summary>
 	public void OnAdminHelpButton()
@@ -834,6 +891,30 @@ public class ChatUI : MonoBehaviour
 		else
 		{
 			adminHelpChat.gameObject.SetActive(true);
+			if (helpSelectionPanel != null && helpSelectionPanel.activeInHierarchy)
+			{
+				helpSelectionPanel.gameObject.SetActive(false);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Opens the mentor help window to talk to the mentors
+	/// </summary>
+	public void OnMentorHelpButton()
+	{
+		CloseChatWindow();
+		if (mentorHelpChat.gameObject.activeInHierarchy)
+		{
+			mentorHelpChat.gameObject.SetActive(false);
+		}
+		else
+		{
+			mentorHelpChat.gameObject.SetActive(true);
+			if (helpSelectionPanel != null && helpSelectionPanel.activeInHierarchy)
+			{
+				helpSelectionPanel.gameObject.SetActive(false);
+			}
 		}
 	}
 }

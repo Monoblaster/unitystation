@@ -19,12 +19,16 @@ namespace Objects.Medical
 		//allows us to avoid  syncing power when it is unchanged
 		private bool powerInit;
 
-		public Sprite openUnPoweredSprite;
-		public Sprite openPoweredSprite;
-		public Sprite closedUnPoweredSprite;
-		public Sprite closedPoweredSprite;
-		public Sprite[] closedPoweredWithOccupant;
-		public float animSpeed = 0.1f;
+		private enum ScannerState
+		{
+			OpenUnpowered,
+			OpenPowered,
+			ClosedUnpowered,
+			ClosedPowered,
+			ClosedPoweredWithOccupant
+		}
+
+		public Objects.Engineering.APC RelatedAPC;
 
 		private CancellationTokenSource cancelOccupiedAnim = new CancellationTokenSource();
 
@@ -32,6 +36,7 @@ namespace Objects.Medical
 		{
 			base.OnStartClient();
 			SyncPowered(powered, powered);
+			RelatedAPC = GetComponent<APCPoweredDevice>().RelatedAPC;
 		}
 
 		public override void OnSpawnServer(SpawnInfo info)
@@ -39,6 +44,7 @@ namespace Objects.Medical
 			base.OnSpawnServer(info);
 			statusString = "Ready to scan.";
 			SyncPowered(powered, powered);
+			RelatedAPC = GetComponent<APCPoweredDevice>().RelatedAPC;
 		}
 
 		protected override void ServerHandleContentsOnStatusChange(bool willClose)
@@ -88,50 +94,30 @@ namespace Objects.Medical
 				cancelOccupiedAnim.Cancel();
 				if (!powered)
 				{
-					spriteRenderer.sprite = openUnPoweredSprite;
+					doorSpriteHandler.ChangeSprite((int) ScannerState.OpenUnpowered);
 				}
 				else
 				{
-					spriteRenderer.sprite = openPoweredSprite;
+					doorSpriteHandler.ChangeSprite((int) ScannerState.OpenPowered);
 				}
 			}
 			else if (!powered)
 			{
 				cancelOccupiedAnim.Cancel();
-				spriteRenderer.sprite = closedUnPoweredSprite;
+				doorSpriteHandler.ChangeSprite((int) ScannerState.ClosedUnpowered);
 			}
 			else if (ClosetStatus == ClosetStatus.Closed)
 			{
 				cancelOccupiedAnim.Cancel();
-				spriteRenderer.sprite = closedPoweredSprite;
+				doorSpriteHandler.ChangeSprite((int) ScannerState.ClosedPowered);
 			}
 			else if (ClosetStatus == ClosetStatus.ClosedWithOccupant)
 			{
 				cancelOccupiedAnim = new CancellationTokenSource();
 				if (gameObject != null && gameObject.activeInHierarchy)
 				{
-					StartCoroutine(AnimateOccupied());
+					doorSpriteHandler.ChangeSprite((int) ScannerState.ClosedPoweredWithOccupant);
 				}
-			}
-		}
-
-		IEnumerator AnimateOccupied()
-		{
-			var index = 0;
-			while (true)
-			{
-				if (cancelOccupiedAnim.IsCancellationRequested)
-				{
-					yield break;
-				}
-
-				spriteRenderer.sprite = closedPoweredWithOccupant[index];
-				index++;
-				if (index == closedPoweredWithOccupant.Length)
-				{
-					index = 0;
-				}
-				yield return WaitFor.Seconds(animSpeed);
 			}
 		}
 
@@ -158,6 +144,7 @@ namespace Objects.Medical
 
 		public void StateUpdate(PowerStates State)
 		{
+			RelatedAPC = GetComponent<APCPoweredDevice>().RelatedAPC;
 			if (State == PowerStates.Off || State == PowerStates.LowVoltage)
 			{
 				SyncPowered(powered, false);

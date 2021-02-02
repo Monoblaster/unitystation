@@ -13,8 +13,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isBurningOnSpawn: 0
-  flameTemperature: 700
-  flameVolume: 0.005
 --- !u!114 &5733160862123623072
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -33,22 +31,6 @@ MonoBehaviour:
     type: 3}
   smokeTimeSeconds: 180
   spriteHandler: {fileID: 3499719427789762796}
---- !u!114 &6906566218431831969
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7338509426998086507}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d54c3d183673c904882b6d1e8484ca73, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nameOverride: 
-  backgroundColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  iconOverride: {fileID: 0}
-  backgroundSprite: {fileID: 0}
 --- !u!114 &8431387283529515776
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -97,6 +79,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: 1c69162b3a40fb14896b480602231cae,
         type: 2}
+    - target: {fileID: 3532393564309681412, guid: 05a135eab68164d34bb02b82fff3cde0,
+        type: 3}
+      propertyPath: hidesIdentity
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4341101185987976454, guid: 05a135eab68164d34bb02b82fff3cde0,
         type: 3}
       propertyPath: SubCatalogue.Array.size

@@ -15,8 +15,8 @@ namespace AdminTools
 
 		[SerializeField] private bool showAdminsOnly = false;
 		[SerializeField] private bool disableButtonInteract = false;
+		[SerializeField] private bool hideSensitiveFields = false;
 		private float refreshTime = 3f;
-		private float currentCount = 0f;
 
 		private List<GameObject> HiddenButtons = new List<GameObject>();
 		[SerializeField] private AdminSearchBar searchBar = null;
@@ -46,8 +46,11 @@ namespace AdminTools
 
 		void RefreshPlayerList()
 		{
-			if (ServerData.UserID == null || PlayerList.Instance.AdminToken == null) return;
-			RequestAdminPlayerList.Send(ServerData.UserID, PlayerList.Instance.AdminToken);
+			if (ServerData.UserID == null || (PlayerList.Instance.AdminToken == null && PlayerList.Instance.MentorToken == null)) return;
+			string MentorOrAdminToken = PlayerList.Instance.MentorToken;
+			if(MentorOrAdminToken == null)
+				MentorOrAdminToken = PlayerList.Instance.AdminToken;
+			RequestAdminPlayerList.Send(ServerData.UserID, MentorOrAdminToken);
 		}
 
 		public void ReceiveUpdatedPlayerList(AdminPlayersList playerList)
@@ -62,7 +65,7 @@ namespace AdminTools
 				var index = playerEntries.FindIndex(x => x.PlayerData.uid == p.uid);
 				if (index != -1)
 				{
-					playerEntries[index].UpdateButton(p, SelectPlayerInList, masterNotification, disableButtonInteract);
+					playerEntries[index].UpdateButton(p, SelectPlayerInList, masterNotification, disableButtonInteract,hideSensitiveFields);
 				}
 				else
 				{
@@ -72,7 +75,7 @@ namespace AdminTools
 					}
 					var e = Instantiate(playerEntryPrefab, playerListContent);
 					var entry = e.GetComponent<AdminPlayerEntry>();
-					entry.UpdateButton(p, SelectPlayerInList, masterNotification, disableButtonInteract);
+					entry.UpdateButton(p, SelectPlayerInList, masterNotification, disableButtonInteract,hideSensitiveFields);
 					playerEntries.Add(entry);
 					index = playerEntries.Count - 1;
 				}
@@ -136,8 +139,11 @@ namespace AdminTools
 			}
 			HiddenButtons.Clear();
 
-			var buttons = playerEntries;//Grabs fresh list of all the possible buttons
-
+			//Grabs fresh list of all the possible buttons
+			// TODO: encapsulate this adminPlayerList search more generic so that it can better be used across different admin systems
+			var buttons = playerEntries.Count > 0 
+				? playerEntries 
+				: gameObject.transform.parent.parent.parent.GetComponent<GUI_AdminTools>().GetPlayerEntries();
 			var Searchtext = searchBar.SearchText();
 
 			for (int i = 0; i < buttons.Count; i++)

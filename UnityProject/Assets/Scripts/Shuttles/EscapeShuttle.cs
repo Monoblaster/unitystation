@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Managers;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Events;
@@ -289,7 +290,7 @@ public class EscapeShuttle : NetworkBehaviour
 					Status = EscapeShuttleStatus.DockedCentcom;
 					if (Status == EscapeShuttleStatus.DockedCentcom && HasShuttleDockedToStation == true)
 					{
-						SoundManager.PlayAtPosition("HyperSpaceEnd", transform.position, gameObject);
+						SoundManager.PlayAtPosition(SingletonSOSounds.Instance.HyperSpaceEnd, transform.position, gameObject);
 					}
 				}
 			}
@@ -539,7 +540,7 @@ public class EscapeShuttle : NetworkBehaviour
 
 	public void SendShuttle()
 	{
-		SoundManager.PlayAtPosition("HyperSpaceBegin", transform.position, gameObject);
+		SoundManager.PlayAtPosition(SingletonSOSounds.Instance.HyperSpaceBegin, transform.position, gameObject);
 
 		StartCoroutine(WaitForShuttleLaunch());
 	}
@@ -548,7 +549,7 @@ public class EscapeShuttle : NetworkBehaviour
 	{
 		yield return WaitFor.Seconds(7f);
 
-		SoundManager.PlayAtPosition("HyperSpaceProgress", transform.position, gameObject);
+		SoundManager.PlayAtPosition(SingletonSOSounds.Instance.HyperSpaceProgress, transform.position, gameObject);
 
 		Status = EscapeShuttleStatus.OnRouteToStationTeleport;
 

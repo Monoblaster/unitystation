@@ -1,9 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using AdminTools;
 using Messages.Client;
-using Mirror;
 
 public class RequestAdminPromotion : ClientMessage
 {
@@ -24,7 +22,7 @@ public class RequestAdminPromotion : ClientMessage
 			PlayerList.Instance.ProcessAdminEnableRequest(Userid, UserToPromote);
 			var user = PlayerList.Instance.GetByUserID(UserToPromote);
 			UIManager.Instance.adminChatWindows.adminToAdminChat.ServerAddChatRecord(
-				$"{player.ExpensiveName()} made {user.Name} an admin. Users ID is: {UserToPromote}", Userid);
+				$"{player.Player().Username} made {user.Name} an admin. Users ID is: {UserToPromote}", Userid);
 		}
 	}
 
@@ -38,21 +36,5 @@ public class RequestAdminPromotion : ClientMessage
 		};
 		msg.Send();
 		return msg;
-	}
-
-	public override void Deserialize(NetworkReader reader)
-	{
-		base.Deserialize(reader);
-		Userid = reader.ReadString();
-		AdminToken = reader.ReadString();
-		UserToPromote = reader.ReadString();
-	}
-
-	public override void Serialize(NetworkWriter writer)
-	{
-		base.Serialize(writer);
-		writer.WriteString(Userid);
-		writer.WriteString(AdminToken);
-		writer.WriteString(UserToPromote);
 	}
 }

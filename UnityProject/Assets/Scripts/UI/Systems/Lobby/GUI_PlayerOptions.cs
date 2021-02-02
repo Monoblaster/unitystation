@@ -1,4 +1,5 @@
-﻿using Mirror;
+﻿using Managers;
+using Mirror;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -64,7 +65,7 @@ public class GUI_PlayerOptions : MonoBehaviour
 
 	public void BtnOk()
 	{
-		SoundManager.Play("Click01");
+		SoundManager.Play(SingletonSOSounds.Instance.Click01);
 		if (string.IsNullOrEmpty(playerNameInput.text.Trim()))
 		{
 			return;
@@ -105,7 +106,7 @@ public class GUI_PlayerOptions : MonoBehaviour
 	{
 		if (BuildPreferences.isForRelease)
 		{
-			networkManager.networkAddress = Managers.instance.serverIP;
+			networkManager.networkAddress = GameScreenManager.Instance.serverIP;
 			networkManager.StartClient();
 			return;
 		}

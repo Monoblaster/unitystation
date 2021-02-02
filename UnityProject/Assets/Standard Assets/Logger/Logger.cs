@@ -270,6 +270,7 @@ public enum Category
 	MLAgents,
 	Direction,
 	Admin,
+	Mentor,
 	BuckledMovement,
 	ProgressAction,
 	Botany,
@@ -278,7 +279,8 @@ public enum Category
 	SubScenes,
 	Spells,
 	UIAction,
-	Cooldowns
+	Cooldowns,
+	Addressables
 }
 
 [Serializable]

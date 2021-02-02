@@ -4,7 +4,6 @@ using System.Linq;
 using TileManagement;
 using UnityEngine;
 using UnityEngine.Tilemaps;
-using YamlDotNet.Samples;
 
 /// <summary>
 /// Main entry point for Tile Interaction system.
@@ -290,7 +289,7 @@ public class InteractableTiles : NetworkBehaviour, IClientInteractable<Positiona
 
 	}
 
-	bool TryInteractWithTile(TileApply interaction)
+	private bool TryInteractWithTile(TileApply interaction)
 	{
 		// Iterate over the interactions for the given tile until a valid one is found.
 		foreach (var tileInteraction in interaction.BasicTile.TileInteractions)
@@ -425,7 +424,7 @@ public class InteractableTiles : NetworkBehaviour, IClientInteractable<Positiona
 			OrientationEnum orientation = OrientationEnum.Down;
 			Vector3Int PlaceDirection = PlayerManager.LocalPlayerScript.WorldPos - tilePos;
 			bool isWallBlocked = false;
-			if (PlaceDirection.x != 0 && !MatrixManager.IsWallAt(tilePos + new Vector3Int(PlaceDirection.x > 0 ? 1 : -1, 0, 0), true))
+			if (PlaceDirection.x != 0 && !MatrixManager.IsWallAtAnyMatrix(tilePos + new Vector3Int(PlaceDirection.x > 0 ? 1 : -1, 0, 0), true))
 			{
 				if (PlaceDirection.x > 0)
 				{
@@ -438,7 +437,7 @@ public class InteractableTiles : NetworkBehaviour, IClientInteractable<Positiona
 			}
 			else
 			{
-				if (PlaceDirection.y != 0 && !MatrixManager.IsWallAt(tilePos + new Vector3Int(0, PlaceDirection.y > 0 ? 1 : -1, 0), true))
+				if (PlaceDirection.y != 0 && !MatrixManager.IsWallAtAnyMatrix(tilePos + new Vector3Int(0, PlaceDirection.y > 0 ? 1 : -1, 0), true))
 				{
 					if (PlaceDirection.y > 0)
 					{
@@ -455,7 +454,7 @@ public class InteractableTiles : NetworkBehaviour, IClientInteractable<Positiona
 				}
 			}
 
-			if (!MatrixManager.IsWallAt(tilePos, false) || isWallBlocked)
+			if (!MatrixManager.IsWallAtAnyMatrix(tilePos, false) || isWallBlocked)
 			{
 				if (instanceActive)
 				{
@@ -531,7 +530,7 @@ public class InteractableTiles : NetworkBehaviour, IClientInteractable<Positiona
 		var getTile = metaTileMap.GetTile(cellPos, LayerType.Walls) as BasicTile;
 		if (getTile == null || getTile.Mineable == false) return false;
 
-		SoundManager.PlayNetworkedAtPos("BreakStone", worldPosition);
+		SoundManager.PlayNetworkedAtPos(SingletonSOSounds.Instance.BreakStone, worldPosition);
 		Spawn.ServerPrefab(getTile.SpawnOnDeconstruct, worldPosition,
 			count: getTile.SpawnAmountOnDeconstruct);
 		tileChangeManager.RemoveTile(cellPos, LayerType.Walls);

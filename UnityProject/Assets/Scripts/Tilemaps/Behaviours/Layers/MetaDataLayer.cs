@@ -31,7 +31,7 @@ public class MetaDataLayer : MonoBehaviour
 		{
 			if (createIfNotExists)
 			{
-				nodes[localPosition] = new MetaDataNode(localPosition, reactionManager);
+				nodes[localPosition] = new MetaDataNode(localPosition, reactionManager, matrix);
 			}
 			else
 			{
@@ -126,10 +126,6 @@ public class MetaDataLayer : MonoBehaviour
 				}
 				case "SpaceCleaner":
 					Clean(worldPosInt, localPosInt, false);
-					break;
-				case "WeldingFuel":
-					//temporary: converting spilled fuel to plasma
-					Get(localPosInt).GasMix.AddGas(Gas.Plasma, reagent.Value);
 					break;
 				case "SpaceLube":
 				{

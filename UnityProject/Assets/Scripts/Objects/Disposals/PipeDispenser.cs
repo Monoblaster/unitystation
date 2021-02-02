@@ -3,24 +3,28 @@ using UnityEngine;
 using Mirror;
 using Pipes;
 using Objects.Construction;
+using AddressableReferences;
 
 namespace Objects.Atmospherics
 {
 	public class PipeDispenser : NetworkBehaviour
 	{
-		const float DISPENSING_TIME = 2; // As per sprite sheet JSON file.
+		private const float DISPENSING_TIME = 2; // As per sprite sheet JSON file.
 
-		ObjectBehaviour objectBehaviour;
-		WrenchSecurable securable;
-		HasNetworkTab netTab;
-		SpriteHandler spriteHandler;
+		[SerializeField]
+		private AddressableAudioSource OperatingSound = null;
 
-		Coroutine animationRoutine;
+		private ObjectBehaviour objectBehaviour;
+		private WrenchSecurable securable;
+		private HasNetworkTab netTab;
+		private SpriteHandler spriteHandler;
+
+		private Coroutine animationRoutine;
 
 		public bool MachineOperating { get; private set; } = false;
 
 		[SyncVar(hook = nameof(SyncObjectProperties))]
-		PipeObjectSettings newPipe;
+		private PipeObjectSettings newPipe;
 
 		public enum PipeLayer
 		{
@@ -35,7 +39,7 @@ namespace Objects.Atmospherics
 			Operating = 1
 		}
 
-		void Awake()
+		private void Awake()
 		{
 			objectBehaviour = GetComponent<ObjectBehaviour>();
 			securable = GetComponent<WrenchSecurable>();
@@ -45,7 +49,7 @@ namespace Objects.Atmospherics
 			securable.OnAnchoredChange.AddListener(OnAnchoredChange);
 		}
 
-		void UpdateSprite()
+		private void UpdateSprite()
 		{
 			if (MachineOperating)
 			{
@@ -57,7 +61,7 @@ namespace Objects.Atmospherics
 			}
 		}
 
-		void SyncObjectProperties(PipeObjectSettings oldState, PipeObjectSettings newState)
+		private void SyncObjectProperties(PipeObjectSettings oldState, PipeObjectSettings newState)
 		{
 			newPipe = newState;
 			newPipe.pipeObject.GetComponentInChildren<SpriteRenderer>().color = newPipe.pipeColor;
@@ -65,7 +69,7 @@ namespace Objects.Atmospherics
 
 		public void Dispense(GameObject objectPrefab, PipeLayer pipeLayer, Color pipeColor)
 		{
-			if (MachineOperating || !securable.IsAnchored) return;
+			if (MachineOperating || securable.IsAnchored == false) return;
 
 			this.RestartCoroutine(SetMachineOperating(), ref animationRoutine);
 			SpawnResult spawnResult = Spawn.ServerPrefab(objectPrefab, objectBehaviour.AssumedWorldPositionServer());
@@ -86,22 +90,22 @@ namespace Objects.Atmospherics
 			}
 		}
 
-		IEnumerator SetMachineOperating()
+		private IEnumerator SetMachineOperating()
 		{
 			MachineOperating = true;
 			UpdateSprite();
-			SoundManager.PlayNetworkedAtPos("PosterCreate", objectBehaviour.AssumedWorldPositionServer(), sourceObj: gameObject);
+			SoundManager.PlayNetworkedAtPos(OperatingSound, objectBehaviour.AssumedWorldPositionServer(), sourceObj: gameObject);
 			yield return WaitFor.Seconds(DISPENSING_TIME);
 			MachineOperating = false;
 			UpdateSprite();
 		}
 
-		void OnAnchoredChange()
+		private void OnAnchoredChange()
 		{
 			netTab.enabled = securable.IsAnchored;
 		}
 
-		struct PipeObjectSettings
+		private struct PipeObjectSettings
 		{
 			public GameObject pipeObject;
 			public Color pipeColor;

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using DatabaseAPI;
+using Items;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -124,6 +125,7 @@ public class DevSpawnerListItemController : MonoBehaviour
 				List<Vector4> pal = palette.ConvertAll((c) => new Vector4(c.r, c.g, c.b, c.a));
 				block.SetVectorArray("_ColorPalette", pal);
 				block.SetInt("_IsPaletted", 1);
+				block.SetInt("_PaletteSize", pal.Count);
 			}
 			else
 			{
@@ -144,7 +146,7 @@ public class DevSpawnerListItemController : MonoBehaviour
 		isPaletted = false;
 		//image.material.SetInt("_IsPaletted", 0);
 
-		if (prefab.TryGetComponent<ItemAttributesV2>(out ItemAttributesV2 prefabAttributes))
+		if (prefab.TryGetComponent(out ItemAttributesV2 prefabAttributes))
 		{
 			ItemsSprites sprites = prefabAttributes.ItemSprites;
 			if (sprites.IsPaletted)
@@ -154,6 +156,7 @@ public class DevSpawnerListItemController : MonoBehaviour
 
 				isPaletted = true;
 				image.material.SetInt("_IsPaletted", 1);
+				image.material.SetInt("_PaletteSize", palette.Count);
 				image.material.SetColorArray("_ColorPalette", palette.ToArray());
 				palette = new List<Color>(image.material.GetColorArray("_ColorPalette"));
 			}
@@ -163,7 +166,7 @@ public class DevSpawnerListItemController : MonoBehaviour
 			}
 		}
 
-		if (!isPaletted)
+		if (isPaletted == false)
 		{
 			image.material.SetInt("_IsPaletted", 0);
 		}
@@ -181,7 +184,7 @@ public class DevSpawnerListItemController : MonoBehaviour
 		{
 			Spawn.ServerPrefab(prefab, position);
 			UIManager.Instance.adminChatWindows.adminToAdminChat.ServerAddChatRecord(
-				$"{PlayerManager.LocalPlayer.ExpensiveName()} spawned a {prefab.name} at {position}", ServerData.UserID);
+				$"{PlayerManager.LocalPlayer.Player().Username} spawned a {prefab.name} at {position}", ServerData.UserID);
 		}
 		else
 		{

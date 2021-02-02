@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using AddressableReferences;
 using UnityEngine;
 using Mirror;
 using ScriptableObjects;
@@ -8,7 +9,7 @@ using Objects.Wallmounts;
 
 namespace Doors
 {
-	public class DoorController : NetworkBehaviour, IServerSpawn, ISetMultitoolSlave
+	public class DoorController : NetworkBehaviour, ISetMultitoolSlave
 	{
 		//public bool isWindowed = false;
 		public enum OpeningDirection
@@ -26,18 +27,27 @@ namespace Doors
 
 		private int closedLayer;
 		private int closedSortingLayer;
-		public string openSFX = "AirlockOpen", closeSFX = "AirlockClose";
+
+		public AddressableAudioSource openSFX;
+
+		public AddressableAudioSource closeSFX;
 
 		private IEnumerator coWaitOpened;
 		private IEnumerator coBlockAutomaticClosing;
-		[Tooltip("how many sprites in the main door animation")] public int doorAnimationSize = 6;
+		[Tooltip("how many sprites in the main door animation")]
+		public int doorAnimationSize = 6;
 		public DoorAnimator doorAnimator;
-		[Tooltip("first frame of the light animation")] public int DoorDeniedSpriteOffset = 12;
-		[Tooltip("first frame of the door Cover/window animation")] public int DoorCoverSpriteOffset;
+		[Tooltip("first frame of the light animation")]
+		public int DoorDeniedSpriteOffset = 12;
+		[Tooltip("first frame of the door Cover/window animation")]
+		public int DoorCoverSpriteOffset;
 		private int doorDirection;
-		[Tooltip("first frame of the light animation")] public int DoorLightSpriteOffset;
-		[Tooltip("first frame of the door animation")] public int DoorSpriteOffset;
-		[SerializeField] [Tooltip("SpriteRenderer which is toggled when welded. Existence is equivalent to weldability of door.")] private SpriteRenderer weldOverlay = null;
+		[Tooltip("first frame of the light animation")]
+		public int DoorLightSpriteOffset;
+		[Tooltip("first frame of the door animation")]
+		public int DoorSpriteOffset;
+		[SerializeField] [Tooltip("SpriteRenderer which is toggled when welded. Existence is equivalent to weldability of door.")]
+		private SpriteRenderer weldOverlay = null;
 		[SerializeField] private Sprite weldSprite = null;
 
 		public bool IsWeldable => (weldOverlay != null);
@@ -116,7 +126,7 @@ namespace Doors
 		private AccessRestrictions accessRestrictions;
 		public AccessRestrictions AccessRestrictions {
 			get {
-				if (!accessRestrictions)
+				if (accessRestrictions == false)
 				{
 					accessRestrictions = GetComponent<AccessRestrictions>();
 				}
@@ -145,7 +155,7 @@ namespace Doors
 		private void EnsureInit()
 		{
 			if (registerTile != null) return;
-			if (!isWindowedDoor)
+			if (isWindowedDoor == false)
 			{
 				closedLayer = LayerMask.NameToLayer("Door Closed");
 			}
@@ -174,7 +184,7 @@ namespace Doors
 		/// <summary>
 		/// Invoked by doorAnimator once a door animation finishes
 		/// </summary>
-		public void OnAnimationFinished()
+		public void OnAnimationFinished(bool isClosing = false)
 		{
 			isPerformingAction = false;
 			//check if the door is closing on something, and reopen it if so.
@@ -191,10 +201,10 @@ namespace Doors
 			// the below logic and reopen the door if the client got stuck in the door in the .15 s gap.
 
 			//only do this check when door is closing, and only for doors that block all directions (like airlocks)
-			if (CustomNetworkManager.IsServer && IsClosed && !registerTile.OneDirectionRestricted && !ignorePassableChecks)
+			if (isClosing && CustomNetworkManager.IsServer && registerTile.OneDirectionRestricted == false && ignorePassableChecks == false)
 			{
-				if (!MatrixManager.IsPassableAt(registerTile.WorldPositionServer, registerTile.WorldPositionServer,
-					isServer: true, includingPlayers: true, context: this.gameObject))
+				if (MatrixManager.IsPassableAtAllMatrices(registerTile.WorldPositionServer, registerTile.WorldPositionServer,
+					isServer: true, includingPlayers: true, context: this.gameObject) == false)
 				{
 					//something is in the way, open back up
 					//set this field to false so open command will actually work
@@ -238,7 +248,7 @@ namespace Doors
 			yield return WaitFor.Seconds(maxTimeOpen);
 			if (CustomNetworkManager.IsServer)
 			{
-				if (!BlockAutoClose)
+				if (BlockAutoClose == false)
 				{
 					CloseSignal();
 				}
@@ -251,7 +261,7 @@ namespace Doors
 			if (openSFX != null)
 			{
 				// Need to play this sound as global - this will ignore muffle effect
-				SoundManager.PlayAtPosition(openSFX, registerTile.WorldPosition, gameObject, polyphonic: true, isGlobal: true);
+				_ = SoundManager.PlayAtPosition(openSFX, registerTile.WorldPosition, gameObject, polyphonic: true, isGlobal: true);
 			}
 		}
 
@@ -259,7 +269,7 @@ namespace Doors
 		{
 			if (closeSFX != null)
 			{
-				SoundManager.PlayAtPosition(closeSFX, registerTile.WorldPosition, gameObject, polyphonic: true, isGlobal: true);
+				_ = SoundManager.PlayAtPosition(closeSFX, registerTile.WorldPosition, gameObject, polyphonic: true, isGlobal: true);
 			}
 		}
 
@@ -287,7 +297,7 @@ namespace Doors
 			if (IsClosed) return;
 
 			// Sliding door is not passable according to matrix
-			if (!isPerformingAction && (ignorePassableChecks || matrix.CanCloseDoorAt(registerTile.LocalPositionServer, true) || doorType == DoorType.sliding))
+			if (isPerformingAction == false && (ignorePassableChecks || matrix.CanCloseDoorAt(registerTile.LocalPositionServer, true) || doorType == DoorType.sliding))
 			{
 				Close();
 			}
@@ -299,14 +309,15 @@ namespace Doors
 
 		public void Close()
 		{
-			if (gameObject == null) return; // probably destroyed by a shuttle crash
+			// Check if this is null... it is possible for this to be null in Unity - gameObject reference can generate an NRE.
+			if (this == null || gameObject == null) return; // probably destroyed by a shuttle crash
 			if (Time.time < delayStartTime + inputDelay) return;
 
 			delayStartTime = Time.time;
 
 			IsClosed = true;
 
-			if (!isPerformingAction)
+			if (isPerformingAction == false)
 			{
 				DoorUpdateMessage.SendToAll(gameObject, DoorUpdateType.Close);
 				if (damageOnClose)
@@ -318,33 +329,36 @@ namespace Doors
 
 		private void ServerAccessDenied()
 		{
-			if (!isPerformingAction)
+			if (isPerformingAction == false)
 			{
 				DoorUpdateMessage.SendToAll(gameObject, DoorUpdateType.AccessDenied);
 			}
 		}
 		public void MobTryOpen(GameObject originator)
 		{
-			if (AccessRestrictions != null && !isEmagged)
+			if (IsClosed == false || isPerformingAction) return;
+
+			if (isEmagged)
 			{
-				if (!AccessRestrictions.CheckAccess(originator))
-				{
-					if (IsClosed && !isPerformingAction)
-					{
-						if (isHackable)
-						{
-							hackingProcess.SendOutputToConnectedNodes(HackingIdentifier.OnIdRejected, originator);
-						}
-						else
-						{
-							ServerAccessDenied();
-						}
-						return;
-					}
-				}
+				TryOpen(originator);
+				return;
 			}
 
-			if (isHackable && !isEmagged)
+			if (AccessRestrictions != null && AccessRestrictions.CheckAccess(originator) == false)
+			{
+				if (isHackable)
+				{
+					hackingProcess.SendOutputToConnectedNodes(HackingIdentifier.OnIdRejected, originator);
+				}
+				else
+				{
+					ServerAccessDenied();
+				}
+
+				return;
+			}
+
+			if (isHackable)
 			{
 				hackingProcess.SendOutputToConnectedNodes(HackingIdentifier.OnShouldOpen, originator);
 			}
@@ -361,7 +375,7 @@ namespace Doors
 
 		public void TryOpen(GameObject originator = null, bool blockClosing = false)
 		{
-			if (Time.time < delayStartTimeTryOpen + inputDelay && !isEmagged) return;
+			if (Time.time < delayStartTimeTryOpen + inputDelay && isEmagged == false) return;
 
 			delayStartTimeTryOpen = Time.time;
 
@@ -371,9 +385,9 @@ namespace Doors
 					Chat.AddExamineMsgFromServer(originator, "This door is welded shut.");
 				return;
 			}
-			if (IsClosed && !isPerformingAction)
+			if (IsClosed && isPerformingAction == false)
 			{
-				if (!pressureWarnActive && DoorUnderPressure() && !isEmagged)
+				if (pressureWarnActive == false && DoorUnderPressure() && isEmagged == false)
 				{
 					if (isHackable)
 					{
@@ -397,13 +411,13 @@ namespace Doors
 			if (Time.time < delayStartTime + inputDelay) return;
 
 			delayStartTime = Time.time;
-			if (!blockClosing)
+			if (blockClosing == false)
 			{
 				ResetWaiting();
 			}
 			IsClosed = false;
 
-			if (!isPerformingAction)
+			if (isPerformingAction == false)
 			{
 				DoorUpdateMessage.SendToAll(gameObject, DoorUpdateType.Open);
 			}
@@ -411,7 +425,7 @@ namespace Doors
 
 		public void ServerTryWeld()
 		{
-			if (!isPerformingAction && (weldOverlay != null))
+			if (isPerformingAction == false && (weldOverlay != null))
 			{
 				ServerWeld();
 			}
@@ -420,7 +434,7 @@ namespace Doors
 		public void ServerWeld()
 		{
 			if (this == null || gameObject == null) return; // probably destroyed by a shuttle crash
-			if (!isPerformingAction)
+			if (isPerformingAction == false)
 			{
 				SyncIsWelded(isWelded, !isWelded);
 			}
@@ -504,7 +518,7 @@ namespace Doors
 		/// <returns></returns>
 		private bool DoorUnderPressure()
 		{
-			if (!enablePressureWarning)
+			if (enablePressureWarning == false)
 			{
 				// Pressure warning system is disabled, so pretend everything is fine.
 				return false;
@@ -520,11 +534,11 @@ namespace Doors
 			// If both sides are not atmos. passable, then we don't care about the pressure difference.
 			var vertPressureDiff = 0.0;
 			var horzPressureDiff = 0.0;
-			if (!upMetaNode.IsOccupied || !downMetaNode.IsOccupied)
+			if (upMetaNode.IsOccupied == false || downMetaNode.IsOccupied == false)
 			{
 				vertPressureDiff = Math.Abs(upMetaNode.GasMix.Pressure - downMetaNode.GasMix.Pressure);
 			}
-			if (!leftMetaNode.IsOccupied || !rightMetaNode.IsOccupied)
+			if (leftMetaNode.IsOccupied == false || rightMetaNode.IsOccupied == false)
 			{
 				horzPressureDiff = Math.Abs(leftMetaNode.GasMix.Pressure - rightMetaNode.GasMix.Pressure);
 			}
@@ -535,16 +549,15 @@ namespace Doors
 				pressureLevel = PressureLevel.Warning;
 				return true;
 			}
-			else if (vertPressureDiff >= pressureThresholdCaution || horzPressureDiff >= pressureThresholdCaution)
+
+			if (vertPressureDiff >= pressureThresholdCaution || horzPressureDiff >= pressureThresholdCaution)
 			{
 				pressureLevel = PressureLevel.Caution;
 				return true;
 			}
-			else
-			{
-				pressureLevel = PressureLevel.Safe;
-				return false;
-			}
+
+			pressureLevel = PressureLevel.Safe;
+			return false;
 		}
 
 		#region UI Mouse Actions
@@ -567,7 +580,7 @@ namespace Doors
 		/// </summary>
 		public void UpdateNewPlayer(NetworkConnection playerConn)
 		{
-			if (!IsClosed)
+			if (IsClosed == false)
 			{
 				DoorUpdateMessage.Send(playerConn, gameObject, DoorUpdateType.Open, true);
 			}
@@ -639,11 +652,6 @@ namespace Doors
 			//close timer
 			HackingNode cancelCloseTimer = hackingProcess.GetNodeWithInternalIdentifier(HackingIdentifier.CancelCloseTimer);
 			cancelCloseTimer.AddToInputMethods(CancelWaiting);
-		}
-
-		public void OnSpawnServer(SpawnInfo info)
-		{
-
 		}
 	}
 }

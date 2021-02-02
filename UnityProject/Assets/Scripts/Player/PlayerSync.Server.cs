@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Doors;
+using Items;
 using UnityEngine;
 using UnityEngine.Events;
 using Objects;
@@ -227,7 +228,7 @@ public partial class PlayerSync
 		Vector3Int origin = ServerPosition;
 		Vector3Int pushGoal = origin + direction.To3Int();
 
-		if (!ignorePassable && !MatrixManager.IsPassableAt(origin, pushGoal, isServer: true, includingPlayers: !followMode))
+		if (!ignorePassable && !MatrixManager.IsPassableAtAllMatrices(origin, pushGoal, isServer: true, includingPlayers: !followMode))
 		{
 			return false;
 		}
@@ -520,7 +521,7 @@ public partial class PlayerSync
 
 		//we only lerp back if the client thinks it's passable  but server does not...if client
 		//thinks it's not passable and server thinks it's passable, then it's okay to let the client continue
-		if (!isClientBump && serverBump != BumpType.None && serverBump != BumpType.Swappable)
+		if (isClientBump == false && serverBump != BumpType.None && serverBump != BumpType.Swappable)
 		{
 			Logger.LogWarningFormat("isBump mismatch, resetting: C={0} S={1}", Category.Movement, isClientBump, serverBump != BumpType.None);
 			RollbackPosition();
@@ -588,7 +589,7 @@ public partial class PlayerSync
 		if (!playerScript.IsGhost)
 		{
 			playerScript.OnTileReached().Invoke(nextState.WorldPosition.RoundToInt());
-			SoundManager.FootstepAtPosition(nextState.WorldPosition, playerScript.mind.stepType, gameObject);
+			FootstepSounds.PlayerFootstepAtPosition(nextState.WorldPosition, this);
 		}
 
 		return nextState;
@@ -602,7 +603,7 @@ public partial class PlayerSync
 	{
 		if (pushable && pushable.TryGetComponent(out PushPull pushPull))
 		{
-			if (Validations.CanInteract(playerScript, NetworkSide.Server) || pushPull && !playerScript.IsInReach(pushPull.registerTile, true))
+			if (Validations.CanInteract(playerScript, NetworkSide.Server) || pushPull && !playerScript.IsRegisterTileReachable(pushPull.registerTile, true))
 			{
 				questionablePushables.Add(pushPull);
 				Logger.LogWarningFormat("Added questionable {0}", Category.PushPull, pushPull);
@@ -721,10 +722,34 @@ public partial class PlayerSync
 		{
 			return;
 		}
-		List<PushPull> pushables = MatrixManager.GetPushableAt(worldOrigin, direction.To2Int(), gameObject, isServer: true);
+
+		Vector2Int twoIntDirection = direction.To2Int();
+		Vector3Int pushableLocation = worldOrigin + (Vector3Int)twoIntDirection;
+
+		List<PushPull> pushables = MatrixManager.GetPushableAt(worldOrigin, twoIntDirection, gameObject, true, true);
 		if (pushables.Count > 0)
 		{
-			pushables[0].TryPush(direction.To2Int());
+			foreach ( PushPull pushable in pushables)
+			{
+				// whether or not we actually manage to push it, make sure we aren't pulling it!
+				if (pushPull.PulledObjectServer == pushable)
+				{
+					pushPull.ServerStopPulling();
+				}
+
+				// if player can't reach, player can't push
+				if (MatrixManager.IsPassableAtAllMatrices(worldOrigin, pushableLocation, isServer: true, includingPlayers: false,
+						context: pushable.gameObject, isReach: true) == false)
+				{
+					continue;
+				}
+
+				// Try pushables until we get one that moves
+				if (pushable.TryPush(twoIntDirection))
+				{
+					break;
+				}
+			}
 		}
 	}
 
@@ -834,7 +859,7 @@ public partial class PlayerSync
 		{
 			var worldOrigin = ServerPosition;
 			var worldTarget = worldOrigin + serverState.WorldImpulse.RoundToInt();
-			if (registerPlayer.IsSlippingServer && MatrixManager.IsPassableAt(worldOrigin, worldTarget, true))
+			if (registerPlayer.IsSlippingServer && MatrixManager.IsPassableAtAllMatrices(worldOrigin, worldTarget, true))
 			{
 				Logger.LogFormat("Letting stunned {0} fly onto {1}", Category.Movement, gameObject.name, worldTarget);
 				return;
@@ -957,6 +982,11 @@ public partial class PlayerSync
 			if (crossedItem.HasTrait(CommonTraits.Instance.Slippery))
 			{
 				registerPlayer.ServerSlip(slipWhileWalking: true);
+				if (crossedItem.HasTrait(CommonTraits.Instance.BluespaceActivity))
+				{
+					//TODO: Replace call with one that passes in potency once potency is trackable
+					registerPlayer.ServerBluespaceActivity();
+				}
 			}
 		}
 	}

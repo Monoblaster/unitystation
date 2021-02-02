@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using Systems.Electricity;
+using AddressableReferences;
 
 namespace Objects
 {
@@ -12,6 +13,7 @@ namespace Objects
 	/// </summary>
 	public class Jukebox : NetworkBehaviour, IAPCPowered
 	{
+
 		/// <summary>
 		/// How many watts at 240 V the Jukebox uses when not in use
 		/// </summary>
@@ -150,6 +152,13 @@ namespace Objects
 			musics = new List<AudioSource>();
 
 			Transform transformAdminMusic = SoundManager.Instance.transform.Find("AdminMusic");
+
+			if (transformAdminMusic == null)
+			{
+				Logger.LogWarning("Update Jukebox to sound addressables.");
+				return; // stop NRE in foreach
+			}
+
 			foreach (Transform transform in transformAdminMusic)
 			{
 				musics.Add(transform.GetComponent<AudioSource>());

@@ -71,6 +71,7 @@ namespace Initialisation
 				stopwatch.Stop();
 				//Logger.Log(stopwatch.ElapsedMilliseconds.ToString() + " < ElapsedMilliseconds ");
 			}
+			SpawnSafeThread.Process();
 		}
 	}
 
@@ -94,6 +95,7 @@ namespace Initialisation
 		ServerInfoUI,
 		CustomNetworkManager,
 		ServerInfoUILobby,
+		Addressables
 	}
 
 	public interface IInitialise

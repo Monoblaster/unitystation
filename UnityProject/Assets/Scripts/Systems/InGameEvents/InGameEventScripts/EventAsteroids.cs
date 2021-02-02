@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Systems.Explosions;
+using AddressableReferences;
+using Managers;
+using Strings;
 
 namespace InGameEvents
 {
@@ -41,9 +44,9 @@ namespace InGameEvents
 			{
 				var text = "Proximity Alert:\nInbound Meteors have been detected.\nBrace for impact!";
 
-				CentComm.MakeAnnouncementNoSound(CentComm.CentCommAnnounceTemplate, text);
+				CentComm.MakeAnnouncement(ChatTemplates.CentcomAnnounce, text, CentComm.UpdateSound.NoSound);
 
-				SoundManager.PlayNetworked("Meteors");
+				_ = SoundManager.PlayNetworked(SingletonSOSounds.Instance.MeteorsAnnouncement);
 			}
 
 			if (FakeEvent) return;
@@ -70,7 +73,7 @@ namespace InGameEvents
 			{
 				var text = "Situation Update:\nNo more Meteors have been detected.";
 
-				CentComm.MakeAnnouncement(CentComm.CentCommAnnounceTemplate, text, CentComm.UpdateSound.alert);
+				CentComm.MakeAnnouncement(ChatTemplates.CentcomAnnounce, text, CentComm.UpdateSound.Alert);
 			}
 		}
 

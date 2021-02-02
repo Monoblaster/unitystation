@@ -2,8 +2,11 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Items;
 using NaughtyAttributes;
 using Objects.Construction;
+using AddressableReferences;
+using Chemistry;
 
 namespace Systems.MobAIs
 {
@@ -13,6 +16,9 @@ namespace Systems.MobAIs
 	/// </summary>
 	public class MobExplore : MobAgent
 	{
+
+		[SerializeField] private AddressableAudioSource EatFoodA = null;
+
 		//Add your targets as needed
 		public enum Target
 		{
@@ -22,6 +28,9 @@ namespace Systems.MobAIs
 			injuredPeople,
 			players
 		}
+
+		[Tooltip("The reagent used by emagged cleanbots")]
+		[SerializeField] private Reagent CB_REAGENT;
 
 		public event Action FoodEatenEvent;
 
@@ -49,6 +58,7 @@ namespace Systems.MobAIs
 		// Position at which an action is performed
 		protected Vector3Int actionPosition;
 
+		public bool IsEmagged = false;
 		private InteractableTiles interactableTiles {
 			get {
 				if (_interactableTiles == null)
@@ -128,23 +138,27 @@ namespace Systems.MobAIs
 
 		private bool IsTargetFound(Vector3Int checkPos)
 		{
-			switch (target)
-			{
-				case Target.food:
-					if (hasFoodPrefereces)
-						return registerObj.Matrix.Get<ItemAttributesV2>(checkPos, true).Any(IsInFoodPreferences);
-					return registerObj.Matrix.GetFirst<Edible>(checkPos, true) != null;
-				case Target.dirtyFloor:
-					return (registerObj.Matrix.Get<FloorDecal>(checkPos, true).Any(p => p.Cleanable));
-				case Target.missingFloor:
-					// Checks the topmost tile if its the base layer (below the floor)
-					return interactableTiles.MetaTileMap.GetTile(checkPos)?.LayerType == LayerType.Base;
-				case Target.injuredPeople:
-					return false;
-				// this includes ghosts!
-				case Target.players:
-					return registerObj.Matrix.GetFirst<PlayerScript>(checkPos, true) != null;
-			}
+				switch (target)
+				{
+					case Target.food:
+						if (hasFoodPrefereces)
+							return registerObj.Matrix.Get<ItemAttributesV2>(checkPos, true).Any(IsInFoodPreferences);
+						return registerObj.Matrix.GetFirst<Edible>(checkPos, true) != null;
+					case Target.dirtyFloor:
+						if (IsEmagged == false) return (registerObj.Matrix.Get<FloorDecal>(checkPos, true).Any(p => p.Cleanable));
+						else return (registerObj.Matrix.Get<FloorDecal>(checkPos, true).Any(p => p.Cleanable) || (!registerObj.Matrix.Get<FloorDecal>(checkPos, true).Any() && interactableTiles.MetaTileMap.GetTile(checkPos)?.LayerType == LayerType.Floors));
+
+					case Target.missingFloor:
+						if (IsEmagged == false) return (interactableTiles.MetaTileMap.GetTile(checkPos)?.LayerType == LayerType.Base || interactableTiles.MetaTileMap.GetTile(checkPos)?.LayerType == LayerType.Underfloor); // Checks the topmost tile if its the base or underfloor layer (below the floor)
+						else return interactableTiles.MetaTileMap.GetTile(checkPos)?.LayerType == LayerType.Floors;
+
+
+					case Target.injuredPeople:
+						return false;
+					// this includes ghosts!
+					case Target.players:
+						return registerObj.Matrix.GetFirst<PlayerScript>(checkPos, true) != null;
+				}
 			return false;
 		}
 
@@ -190,7 +204,7 @@ namespace Systems.MobAIs
 				}
 
 				// Send the sound to all nearby clients
-				SoundManager.PlayNetworkedAtPos("EatFood", transform.position, null, false, false, gameObject);
+				SoundManager.PlayNetworkedAtPos(EatFoodA, transform.position, null, false, false, gameObject);
 
 				Despawn.ServerSingle(food.gameObject);
 				FoodEatenEvent?.Invoke();
@@ -224,10 +238,13 @@ namespace Systems.MobAIs
 				case Target.dirtyFloor:
 					var matrixInfo = MatrixManager.AtPoint(checkPos, true);
 					var worldPos = MatrixManager.LocalToWorldInt(checkPos, matrixInfo);
-					matrixInfo.MetaDataLayer.Clean(worldPos, checkPos, false);
+					if (IsEmagged) matrixInfo.MetaDataLayer.ReagentReact(new ReagentMix(CB_REAGENT,5,283.15f),worldPos,checkPos);
+					else matrixInfo.MetaDataLayer.Clean(worldPos, checkPos, false);
 					break;
 				case Target.missingFloor:
-					interactableTiles.TileChangeManager.UpdateTile(checkPos, TileType.Floor, "Floor");
+					if (IsEmagged == false) interactableTiles.TileChangeManager.UpdateTile(checkPos, TileType.Floor, "Floor");
+					else interactableTiles.TileChangeManager.RemoveTile(checkPos, LayerType.Floors, true);
+
 					break;
 				case Target.injuredPeople:
 					break;

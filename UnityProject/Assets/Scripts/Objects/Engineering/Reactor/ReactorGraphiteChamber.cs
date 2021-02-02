@@ -165,10 +165,10 @@ namespace Objects.Engineering
 				if (ReactorPipe.pipeData.mixAndVolume.Total.x > 0 &&
 					ReactorPipe.pipeData.mixAndVolume.Temperature > BoilingPoint)
 				{
-					var ExcessEnergy = (ReactorPipe.pipeData.mixAndVolume.Temperature - BoilingPoint);
-					ReactorPipe.pipeData.mixAndVolume.Remove((ReactorPipe.pipeData
-						.mixAndVolume.Total * (EnergyToEvaporateWaterPer1
-											   * ExcessEnergy * WaterEnergyDensityPer1)));
+					var ExcessEnergy = ReactorPipe.pipeData.mixAndVolume.Temperature - BoilingPoint;
+					ExcessEnergy *= EnergyToEvaporateWaterPer1 * WaterEnergyDensityPer1;
+					ReactorPipe.pipeData.mixAndVolume.GetGasMix().MultiplyGas(ExcessEnergy);
+					ReactorPipe.pipeData.mixAndVolume.GetReagentMix().RemoveVolume(ReactorPipe.pipeData.mixAndVolume.Total.x * ExcessEnergy);
 				}
 			}
 
@@ -218,7 +218,7 @@ namespace Objects.Engineering
 				LeakedNeutrons =
 					(((LeakedNeutrons / (LeakedNeutrons + ((decimal)Math.Pow((double)LeakedNeutrons, (double)0.82M)))) -
 					  0.5M) * 2 * 36000);
-				radiationProducer.Setlevel((float)LeakedNeutrons);
+				radiationProducer.SetLevel((float)LeakedNeutrons);
 			}
 		}
 

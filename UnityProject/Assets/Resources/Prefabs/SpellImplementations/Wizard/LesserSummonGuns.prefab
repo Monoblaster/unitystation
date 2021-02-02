@@ -66,5 +66,13 @@ MonoBehaviour:
     type: 3}
   gunPrefab: {fileID: 331383614235509145, guid: ed9f88270aae41443a71e5406ac73acb,
     type: 3}
+  LesserSummonGunsSFX:
+    SetLoadSetting: 0
+    AssetAddress: Assets/Prefabs/Magic/SummonGuns.prefab
+    AssetReference:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
   gunSpawnCount: 4
   scatterRadius: 3
+  timeBetweenPortals: 0.3

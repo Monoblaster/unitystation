@@ -6,10 +6,10 @@ namespace Weapons
 {
 	public class PlasmaRefill : MonoBehaviour, ICheckedInteractable<HandApply>, ICheckedInteractable<InventoryApply>
 	{
-		private int oreEff = 500;
+		private int oreEff = 5000;
 
 		// sheets should be about twice as efficent as ore
-		private int sheetEff = 1000;
+		private int sheetEff = 10000;
 		private int toRefill;
 		private int refilledAmmo;
 		private int toConsume;
@@ -95,6 +95,11 @@ namespace Weapons
 		private void AddCharge(int ChargingWatts)
 		{
 			battery.Watts += ChargingWatts;
+
+			if (battery.Watts > battery.MaxWatts)
+			{
+				battery.Watts = battery.MaxWatts;
+			}
 
 			if (electricalMagazine != null)
 			{

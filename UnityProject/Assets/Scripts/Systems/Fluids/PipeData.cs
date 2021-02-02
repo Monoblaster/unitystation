@@ -4,11 +4,10 @@ using System.Collections.Generic;
 using Systems.Atmospherics;
 using Chemistry;
 using UnityEngine;
-using Systems.Atmospherics;
 
 namespace Pipes
 {
-	[System.Serializable]
+	[Serializable]
 	public class PipeData
 	{
 		public PipeLayer PipeLayer = PipeLayer.Second;
@@ -86,7 +85,7 @@ namespace Pipes
 				PipeAction.pipeData = this;
 			}
 
-			AtmosManager.Instance.inGameNewPipes.Add(this);
+			AtmosManager.Instance.AddPipe(this);
 			ConnectedPipes =
 				PipeFunctions.GetConnectedPipes(ConnectedPipes, this, MatrixPos, matrix);
 
@@ -139,7 +138,7 @@ namespace Pipes
 
 		public virtual void OnDisable()
 		{
-			AtmosManager.Instance.inGameNewPipes.Remove(this);
+			AtmosManager.Instance.RemovePipe(this);
 			foreach (var Pipe in ConnectedPipes)
 			{
 				if(Pipe == null) continue;
@@ -210,11 +209,11 @@ namespace Pipes
 			MetaDataLayer metaDataLayer = MatrixManager.AtPoint(tileWorldPosition, true).MetaDataLayer;
 			if (pipeNode != null)
 			{
-				pipeNode.IsOn.GasMix += ToSpill.Item2;
+				GasMix.TransferGas(pipeNode.IsOn.GasMix, ToSpill.Item2, ToSpill.Item2.Moles);
 			}
 			else
 			{
-				matrix.GetMetaDataNode(ZeroedLocation).GasMix += ToSpill.Item2;
+				GasMix.TransferGas(matrix.GetMetaDataNode(ZeroedLocation).GasMix, ToSpill.Item2, ToSpill.Item2.Moles);
 			}
 			metaDataLayer.UpdateSystemsAt(ZeroedLocation, SystemType.AtmosSystem);
 		}

@@ -6,9 +6,11 @@ using Mirror;
 using System.Linq;
 using Gateway;
 using Systems.Scenes;
+using Random=UnityEngine.Random;
 
 namespace Objects.Science
 {
+
 	public class QuantumPad : NetworkBehaviour, ICheckedInteractable<HandApply>
 	{
 		public QuantumPad connectedPad;
@@ -173,7 +175,7 @@ namespace Objects.Science
 			foreach (ObjectBehaviour player in Matrix.Get<ObjectBehaviour>(registerTileLocation, ObjectType.Player, true))
 			{
 				Chat.AddLocalMsgToChat(message, travelCoord, gameObject);
-				SoundManager.PlayNetworkedForPlayer(player.gameObject, "StealthOff"); //very weird, sometimes does the sound other times not.
+				SoundManager.PlayNetworkedForPlayer(player.gameObject, SingletonSOSounds.Instance.StealthOff); //very weird, sometimes does the sound other times not.
 				TransportUtility.TransportObjectAndPulled(player, travelCoord);
 				somethingTeleported = true;
 			}
@@ -182,7 +184,19 @@ namespace Objects.Science
 			foreach (var item in Matrix.Get<ObjectBehaviour>(registerTileLocation, ObjectType.Object, true)
 									.Concat(Matrix.Get<ObjectBehaviour>(registerTileLocation, ObjectType.Item, true)))
 			{
-				TransportUtility.TransportObjectAndPulled(item, travelCoord);
+				
+				if (item.gameObject.TryGetComponent(out IQuantumReaction reaction))
+				{
+					reaction.OnTeleportStart();
+					TransportUtility.TransportObjectAndPulled(item, travelCoord);
+					reaction.OnTeleportEnd();
+				}
+
+				else
+				{
+					TransportUtility.TransportObjectAndPulled(item, travelCoord);
+				}
+
 				somethingTeleported = true;
 			}
 

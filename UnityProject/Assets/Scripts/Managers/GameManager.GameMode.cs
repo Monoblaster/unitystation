@@ -44,7 +44,7 @@ public partial class GameManager
 	public RoundState CurrentRoundState
 	{
 		get => currentRoundState;
-		private set
+		set
 		{
 			currentRoundState = value;
 			Logger.LogFormat("CurrentRoundState is now {0}!", Category.Round, value);
@@ -97,19 +97,17 @@ public partial class GameManager
 	/// </summary>
 	public string GetGameModeName(bool overrideSecret = false)
 	{
-		if (overrideSecret)
+		if (SecretGameMode && overrideSecret == false)
 		{
-			if (GameMode == null)
-			{
-				return "null";
-			}
-			else
-			{
-				return GameMode.Name;
-			}
+			return "Secret";
 		}
 
-		return SecretGameMode ? "Secret" : GameMode.Name;
+		if (GameMode == null)
+		{
+			return "null";
+		}
+
+		return GameMode.Name;
 	}
 
 	/// <summary>

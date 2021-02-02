@@ -3,12 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Items;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+using AdminCommands;
 
 /// <summary>
 /// Represents an item slot rendered in the UI.
@@ -35,6 +37,13 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 	[Tooltip("Whether this slot is initially visible in the UI.")]
 	[SerializeField]
 	private bool initiallyHidden = false;
+
+	[Tooltip("Placeholder image that will be disabled when there is an item in slot")]
+	[SerializeField]
+	private Image placeholderImage = null;
+
+	[Tooltip("From where the item slot is linked from")]
+	public ItemStorageLinkOrigin ItemStorageLinkOrigin = ItemStorageLinkOrigin.localPlayer;
 
 	/// pointer is over the actual item in the slot due to raycast target. If item ghost, return slot tooltip
 	public override string Tooltip => Item == null ? ExitTooltip : Item.GetComponent<ItemAttributesV2>().ArticleName;
@@ -65,13 +74,18 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 	private ItemSlot itemSlot;
 	public Text amountText;
 
+	public Image MoreInventoryImage;
+	public HasSubInventory HasSubInventory;
 	private void Awake()
 	{
 		if (amountText)
 		{
 			amountText.enabled = false;
 		}
-
+		if (MoreInventoryImage)
+		{
+			MoreInventoryImage.enabled = false;
+		}
 		image = new UI_ItemImage(gameObject);
 		hidden = initiallyHidden;
 	}
@@ -100,10 +114,25 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 	{
 		if (namedSlot != NamedSlot.none && forLocalPlayer)
 		{
-			LinkSlot(ItemSlot.GetNamed(PlayerManager.LocalPlayerScript.ItemStorage, namedSlot));
+			var linkedSlot = ItemSlot.GetNamed(GetItemStorage(), namedSlot);
+			if (linkedSlot != null)
+			{
+				LinkSlot(linkedSlot);
+			}
 		}
 	}
 
+	private ItemStorage GetItemStorage()
+	{
+		if (ItemStorageLinkOrigin == ItemStorageLinkOrigin.localPlayer)
+		{
+			return PlayerManager.LocalPlayerScript.ItemStorage;
+		}
+		else
+		{
+			return AdminManager.Instance.LocalAdminGhostStorage;
+		}
+	}
 
 	/// <summary>
 	/// Link this item slot to display the contents of the indicated slot, updating whenever the contents change.
@@ -147,7 +176,8 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 	/// </summary>
 	public void RefreshImage()
 	{
-		UpdateImage(ItemObject);
+		if(itemSlot != null)
+			UpdateImage(ItemObject);
 	}
 
 	/// <summary>
@@ -178,6 +208,8 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 		if (!nullItem)
 		{
 			image.ShowItem(item, color);
+			if(placeholderImage)
+				placeholderImage.color = new Color(1, 1, 1, 0);
 
 			//determine if we should show an amount
 			var stack = item.GetComponent<Stackable>();
@@ -191,6 +223,23 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 				//remove the stack display
 				amountText.enabled = false;
 			}
+
+			if (MoreInventoryImage != null)
+			{
+				var Storage = item.GetComponent<InteractableStorage>();
+				if (Storage != null)
+				{
+					HasSubInventory.itemStorage = Storage.ItemStorage;
+					MoreInventoryImage.enabled = true;
+				}
+				else
+				{
+					HasSubInventory.itemStorage = null;
+					MoreInventoryImage.enabled = false;
+				}
+			}
+
+
 		}
 		else
 		{
@@ -220,7 +269,16 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 		{
 			amountText.enabled = false;
 		}
+		if(placeholderImage)
+		{
+			placeholderImage.color = Color.white;
+		}
 
+		if (MoreInventoryImage)
+		{
+			HasSubInventory.itemStorage = null;
+			MoreInventoryImage.enabled = false;
+		}
 
 	}
 
@@ -231,7 +289,15 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 		{
 			amountText.enabled = false;
 		}
-
+		if(placeholderImage)
+		{
+			placeholderImage.color = Color.white;
+		}
+		if (MoreInventoryImage)
+		{
+			HasSubInventory.itemStorage = null;
+			MoreInventoryImage.enabled = false;
+		}
 		ControlTabs.CheckTabClose();
 	}
 
@@ -240,7 +306,7 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 	/// Check if item has an interaction with a an item in a slot
 	/// If not or if bool returned is true, swap items
 	/// </summary>
-	public void TryItemInteract()
+	public void TryItemInteract(bool swapIfEmpty = true)
 	{
 
 		var slotName = itemSlot.SlotIdentifier.NamedSlot;
@@ -254,12 +320,14 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 				//both are occupied)
 				if (TryIF2InventoryApply()) return;
 
-				UIManager.Hands.SwapItem(this);
+				if(swapIfEmpty)
+					UIManager.Hands.SwapItem(this);
 				return;
 			}
 			else
 			{
-				UIManager.Hands.SwapItem(this);
+				if(swapIfEmpty)
+					UIManager.Hands.SwapItem(this);
 				return;
 			}
 		}
@@ -280,7 +348,8 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 				if (UIManager.Hands.OtherSlot.Item != null)
 				{
 					if (TryIF2InventoryApply()) return;
-					UIManager.Hands.SwapItem(this);
+					if(swapIfEmpty)
+						UIManager.Hands.SwapItem(this);
 				}
 			}
 		}
@@ -330,17 +399,45 @@ public class UI_ItemSlot : TooltipMonoBehaviour
 		{
 			amountText.enabled = false;
 		}
-		else if (!hidden && amountText)
+		else if (!hidden)
 		{
 			//show if we have something stackable.
-			if (itemSlot?.ItemObject != null)
+			if ( itemSlot?.ItemObject != null)
 			{
-				var stack = itemSlot.ItemObject.GetComponent<Stackable>();
-				if (stack != null && stack.Amount > 1)
+				if (amountText)
 				{
-					amountText.enabled = true;
+					var stack = itemSlot.ItemObject.GetComponent<Stackable>();
+					if (stack != null && stack.Amount > 1)
+					{
+						amountText.enabled = true;
+					}
+				}
+				if (MoreInventoryImage != null)
+				{
+					var Storage = itemSlot.ItemObject.GetComponent<InteractableStorage>();
+					if (Storage != null)
+					{
+						HasSubInventory.itemStorage = Storage.ItemStorage;
+						MoreInventoryImage.enabled = true;
+					}
+					else
+					{
+						HasSubInventory.itemStorage = null;
+						MoreInventoryImage.enabled = false;
+					}
 				}
 			}
+			if(Item && placeholderImage)
+			{
+				placeholderImage.color = new Color(1,1,1,0);
+			}
+
 		}
 	}
+}
+
+public enum ItemStorageLinkOrigin
+{
+	localPlayer = 0,
+	adminGhost = 1,
 }

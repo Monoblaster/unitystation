@@ -11,27 +11,25 @@ namespace Systems.Atmospherics
 			throw new System.NotImplementedException();
 		}
 
-		public float React(ref GasMix gasMix, Vector3 tilePos)
+		public void React(GasMix gasMix, Vector3 tilePos, Matrix matrix)
 		{
 			if (gasMix.Temperature <= AtmosDefines.WATER_VAPOR_FREEZE)
 			{
 				if (gasMix.GetMoles(Gas.WaterVapor) < 2f)
 				{
 					//Not enough moles to freeze
-					return 0f;
+					return;
 				}
 
 				var numberOfIceToSpawn = Mathf.Floor(gasMix.GetMoles(Gas.WaterVapor) / 2f);
 
 				for (var i = 0; i < numberOfIceToSpawn; i++)
 				{
-					Spawn.ServerPrefab(AtmosManager.Instance.iceShard, tilePos, MatrixManager.GetDefaultParent(tilePos, true));
+					SpawnSafeThread.SpawnPrefab(tilePos, AtmosManager.Instance.iceShard);
 				}
 
 				gasMix.RemoveGas(Gas.WaterVapor, numberOfIceToSpawn * 2f);
 			}
-
-			return 0f;
 		}
 	}
 }

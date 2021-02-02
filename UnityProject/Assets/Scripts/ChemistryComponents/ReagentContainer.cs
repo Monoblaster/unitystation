@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Items;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -12,7 +13,6 @@ namespace Chemistry.Components
 	/// Defines reagent container that can store reagent mix. All reagent mix logic done server side.
 	/// Client can only interact with container by Interactions (Examine, HandApply, etc).
 	/// </summary>
-	[RequireComponent(typeof(RightClickAppearance))]
 	public partial class ReagentContainer : MonoBehaviour, IServerSpawn, IRightClickable, ICheckedInteractable<ContextMenuApply>,
 		IEnumerable<KeyValuePair<Reagent, float>>
 	{
@@ -341,15 +341,15 @@ namespace Chemistry.Components
 			{
 				foreach (var mob in mobs)
 				{
-					var mobGameObject = mob.gameObject;
-					Chat.AddCombatMsgToChat(mobGameObject, mobGameObject.name + " has been splashed with something!",
-						mobGameObject.name + " has been splashed with something!");
+					var mobObject = mob.gameObject;
+					var mobName = mobObject.ExpensiveName();
+					Chat.AddCombatMsgToChat(mobObject, mobName + " has been splashed with something!",
+						mobName + " has been splashed with something!");
 				}
 			}
 			else
 			{
-				Chat.AddLocalMsgToChat($"{gameObject.ExpensiveName()}'s contents spill all over the floor!",
-					(Vector3)worldPos, gameObject);
+				Chat.AddLocalMsgToChat($"The {gameObject.ExpensiveName()}'s contents spill all over the floor!", gameObject);
 			}
 		}
 
@@ -416,13 +416,13 @@ namespace Chemistry.Components
 		{
 			if (IsEmpty)
 			{
-				Chat.AddExamineMsgToClient(gameObject.ExpensiveName() + " is empty.");
+				Chat.AddExamineMsgToClient($"The {gameObject.ExpensiveName()} is empty.");
 				return;
 			}
 
 			foreach (var reagent in CurrentReagentMix)
 			{
-				Chat.AddExamineMsgToClient($"{gameObject.ExpensiveName()} contains {reagent.Value} {reagent.Key}.");
+				Chat.AddExamineMsgToClient($"The {gameObject.ExpensiveName()} contains {reagent.Value} {reagent.Key}.");
 			}
 		}
 

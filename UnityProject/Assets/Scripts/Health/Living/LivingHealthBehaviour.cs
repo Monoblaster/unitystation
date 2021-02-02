@@ -2,12 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Systems.Atmospherics;
 using Light2D;
 using UnityEngine;
 using UnityEngine.Events;
 using Mirror;
 using UnityEngine.Profiling;
+using WebSocketSharp;
 
 /// <summary>
 /// The Required component for all living creatures
@@ -20,10 +22,6 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 
 	//damage incurred per tick per fire stack
 	private static readonly float DAMAGE_PER_FIRE_STACK = 0.08f;
-
-	//volume and temp of hotspot exposed by this player when they are on fire
-	private static readonly float BURNING_HOTSPOT_VOLUME = .005f;
-	private static readonly float BURNING_HOTSPOT_TEMPERATURE = 700f;
 
 	/// <summary>
 	/// Invoked when conscious state changes. Provides old state and new state as 1st and 2nd args.
@@ -126,10 +124,21 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 	private RegisterTile registerTile;
 	private ConsciousState consciousState;
 
-	public bool IsCrit => ConsciousState == ConsciousState.UNCONSCIOUS;
-	public bool IsSoftCrit => ConsciousState == ConsciousState.BARELY_CONSCIOUS;
+	public bool IsCrit => consciousState == ConsciousState.UNCONSCIOUS;
+	public bool IsSoftCrit => consciousState == ConsciousState.BARELY_CONSCIOUS;
 
-	public bool IsDead => ConsciousState == ConsciousState.DEAD;
+	public bool IsDead => consciousState == ConsciousState.DEAD;
+
+	public bool IsSSD => consciousState != ConsciousState.DEAD &&
+	                     this is PlayerHealth &&
+	                     TryGetComponent(out PlayerScript player) &&
+	                     (player.mind == null || player.mind.IsOnline() == false);
+
+
+	public bool IsBrainDead => consciousState == ConsciousState.DEAD &&
+	                           this is PlayerHealth &&
+	                           TryGetComponent(out PlayerScript player) &&
+	                           (player.mind == null || player.mind.IsOnline() == false);
 
 	/// <summary>
 	/// Has the heart stopped.
@@ -154,7 +163,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 		{
 			UpdateManager.Add(ServerPeriodicUpdate, tickRate);
 		}
-		
+
 		UpdateManager.Add(PeriodicUpdate, 1f);
 	}
 
@@ -164,12 +173,12 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 		{
 			UpdateManager.Remove(CallbackType.PERIODIC_UPDATE, ServerPeriodicUpdate);
 		}
-				
+
 		UpdateManager.Remove(CallbackType.PERIODIC_UPDATE, PeriodicUpdate);
 	}
 
 	/// Add any missing systems:
-	private void EnsureInit()
+	public void EnsureInit()
 	{
 		if (registerTile != null) return;
 		registerTile = GetComponent<RegisterTile>();
@@ -263,6 +272,26 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 		OnClientFireStacksChange.Invoke(this.fireStacks);
 	}
 
+	/// <summary>
+	/// Check if target body part can take damage, if cannot then replace it
+	/// e.x. RightHand -> RightArm
+	/// </summary>
+	private BodyPartType GetDamageableBodyPart(BodyPartType bodyPartType)
+	{
+		if (bodyPartType == BodyPartType.Eyes || bodyPartType == BodyPartType.Mouth)
+			bodyPartType = BodyPartType.Head;
+		else if(bodyPartType == BodyPartType.LeftHand)
+			bodyPartType = BodyPartType.LeftArm;
+		else if(bodyPartType == BodyPartType.RightHand)
+			bodyPartType = BodyPartType.RightArm;
+		else if(bodyPartType == BodyPartType.LeftFoot)
+			bodyPartType = BodyPartType.LeftLeg;
+		else if(bodyPartType == BodyPartType.RightFoot)
+			bodyPartType = BodyPartType.RightLeg;
+
+		return bodyPartType;
+	}
+
 	/// ---------------------------
 	/// PUBLIC FUNCTIONS: HEAL AND DAMAGE:
 	/// ---------------------------
@@ -275,15 +304,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 			return null;
 		}
 
-		if (bodyPartAim == BodyPartType.Groin)
-		{
-			bodyPartAim = BodyPartType.Chest;
-		}
-
-		if (bodyPartAim == BodyPartType.Eyes || bodyPartAim == BodyPartType.Mouth)
-		{
-			bodyPartAim = BodyPartType.Head;
-		}
+		bodyPartAim = GetDamageableBodyPart(bodyPartAim);
 
 		if (BodyParts.Count == 0)
 		{
@@ -342,7 +363,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 	public void ApplyDamage(GameObject damagedBy, float damage,
 		AttackType attackType, DamageType damageType)
 	{
-	
+
 		foreach (var bodyPart in BodyParts)
 		{
 			ApplyDamageToBodypart(damagedBy, damage / BodyParts.Count, attackType, damageType, bodyPart.Type);
@@ -377,7 +398,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 	{
 		TryGibbing(damage);
 
-		BodyPartBehaviour bodyPartBehaviour = GetBodyPart(damage, damageType, bodyPartAim);
+		var bodyPartBehaviour = GetBodyPart(damage, damageType, bodyPartAim);
 		if (bodyPartBehaviour == null)
 		{
 			return;
@@ -505,8 +526,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 				SyncFireStacks(fireStacks, 0);
 			}
 
-			registerTile.Matrix.ReactionManager.ExposeHotspotWorldPosition(gameObject.TileWorldPosition(),
-				BURNING_HOTSPOT_TEMPERATURE, BURNING_HOTSPOT_VOLUME);
+			registerTile.Matrix.ReactionManager.ExposeHotspotWorldPosition(gameObject.TileWorldPosition());
 		}
 
 		CalculateRadiationDamage();
@@ -589,7 +609,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 	[Server]
 	public void CalculateOverallHealth()
 	{
-		float newHealth = 100;
+		float newHealth = maxHealth;
 		newHealth -= CalculateOverallBodyPartDamage();
 		newHealth -= CalculateOverallBloodLossDamage();
 		newHealth -= bloodSystem.OxygenDamage;
@@ -884,7 +904,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 	protected virtual void LethalElectrocution(Electrocution electrocution, float shockPower)
 	{
 		// TODO: Add sparks VFX at shockSourcePos.
-		SoundManager.PlayNetworkedAtPos("Sparks#", electrocution.ShockSourcePos);
+		SoundManager.PlayNetworkedAtPos(SingletonSOSounds.Instance.Sparks, electrocution.ShockSourcePos);
 
 		float damage = shockPower;
 		ApplyDamage(null, damage, AttackType.Internal, DamageType.Burn);
@@ -925,6 +945,8 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 		{
 			return BodyParts[searchIndex];
 		}
+
+		bodyPartAim = GetDamageableBodyPart(bodyPartAim);
 
 		//If nothing is found then try to find a chest component:
 		searchIndex = BodyParts.FindIndex(x => x.Type == BodyPartType.Chest);
@@ -990,8 +1012,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 		var cs = GetComponentInParent<PlayerScript>()?.characterSettings;
 		if (cs != null)
 		{
-			theyPronoun = cs.TheyPronoun();
-			theyPronoun = theyPronoun[0].ToString().ToUpper() + theyPronoun.Substring(1);
+			theyPronoun = cs.TheyPronoun().Capitalize();
 			theirPronoun = cs.TheirPronoun();
 		}
 
@@ -999,7 +1020,7 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 		if (IsDead)
 		{
 			healthString += "limp and unresponsive; there are no signs of life";
-			if (this is PlayerHealth && GetComponent<PlayerScript>().mind.IsOnline() == false)
+			if (IsSSD)
 			{
 				healthString += $" and {theirPronoun} soul has departed";
 			}
@@ -1032,18 +1053,58 @@ public abstract class LivingHealthBehaviour : NetworkBehaviour, IHealth, IFireEx
 			// On fire?
 			if (FireStacks > 0)
 			{
-				healthDescription= "on fire!";
+				healthDescription = "on fire!";
 			}
 			healthString += healthDescription;
 
 			if (this is PlayerHealth && GetComponent<PlayerScript>().mind.IsOnline() == false)
 			{
 				healthString += $"\n{theyPronoun} has a blank, absent-minded stare and appears completely unresponsive to anything. " +
-						$"{theyPronoun} may snap out of it soon.";
+				                $"{theyPronoun} may snap out of it soon.";
 			}
 		}
 
 		return healthString;
+	}
+
+	public string GetShortStatus()
+	{
+		if (IsBrainDead)
+		{
+			return "BRAINDEAD";
+		}
+		if (IsDead)
+		{
+			return "DEAD";
+		}
+
+		if (IsSSD)
+		{
+			return "SSD";
+		}
+
+		if (IsCrit || IsSoftCrit)
+		{
+			return "CRITICAL";
+		}
+
+		return "OK";
+	}
+
+	public string GetWoundsDescription()
+	{
+		var description = new StringBuilder();
+
+		foreach (var part in BodyParts)
+		{
+			if (part.GetDamageDescription().IsNullOrEmpty())
+			{
+				continue;
+			}
+			description.AppendFormat("\n<b>{0}</b> is {1}.\n", part.Type.ToString(), part.GetDamageDescription());
+		}
+
+		return description.ToString();
 	}
 
 	public void OnSpawnServer(SpawnInfo info)

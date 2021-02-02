@@ -1,4 +1,4 @@
-﻿using Antagonists;
+﻿using Audio.Managers;
 using UnityEngine;
 
 namespace Messages.Server.LocalGuiMessages
@@ -9,7 +9,7 @@ namespace Messages.Server.LocalGuiMessages
 		public string AntagSound;
 		public Color TextColor;
 		public Color BackgroundColor;
-		private bool playSound;
+		private bool PlaySound;
 
 		public static AntagBannerMessage Send(
 			GameObject player,
@@ -25,21 +25,23 @@ namespace Messages.Server.LocalGuiMessages
 				AntagSound = antagSound,
 				TextColor = textColor,
 				BackgroundColor = backgroundColor,
-				playSound = playSound
+				PlaySound = playSound
 			};
 
 			msg.SendTo(player);
 			return msg;
 		}
 
-
 		public override void Process()
 		{
 			UIManager.Instance.antagBanner.Show(AntagName, TextColor, BackgroundColor);
 
-			if (playSound)
+			if (PlaySound)
 			{
-				SoundManager.Play(AntagSound);
+				// make sure that all sound is disabled
+				SoundAmbientManager.StopAllAudio();
+				//play the spawn sound
+				SoundAmbientManager.PlayAudio(AntagSound);
 			}
 		}
 	}

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Systems.Spawns;
 
 namespace Systems.Teleport
 {
@@ -161,7 +162,7 @@ namespace Systems.Teleport
 					continue;
 				}
 
-				if (avoidImpassable && !MatrixManager.IsPassableAt(newPosition, CustomNetworkManager.IsServer))
+				if (avoidImpassable && !MatrixManager.IsPassableAtAllMatricesOneTile(newPosition, CustomNetworkManager.IsServer))
 				{
 					continue;
 				}

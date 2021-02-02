@@ -11,15 +11,16 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 	public const float interactionDistance = 1.5f;
 
 	public Mind mind;
+	public ConnectedPlayer connectedPlayer;
 
 	/// <summary>
 	/// Current character settings for this player.
 	/// </summary>
 	public CharacterSettings characterSettings = new CharacterSettings();
 
-	[SyncVar(hook = nameof(SyncPlayerName))] public string playerName = " ";
+	[HideInInspector, SyncVar(hook = nameof(SyncPlayerName))] public string playerName = " ";
 
-	[SyncVar(hook = nameof(SyncVisibleName))] public string visibleName = " ";
+	[HideInInspector, SyncVar(hook = nameof(SyncVisibleName))] public string visibleName = " ";
 	public PlayerNetworkActions playerNetworkActions { get; set; }
 
 	public WeaponNetworkActions weaponNetworkActions { get; set; }
@@ -99,6 +100,13 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 	{
 		Init();
 		waitTimeForRTTUpdate = 0f;
+
+		if (IsGhost == false)
+		{
+			UIManager.Internals.SetupListeners();
+			UIManager.Instance.panelHudBottomController.SetupListeners();
+		}
+
 		isUpdateRTT = true;
 	}
 
@@ -219,15 +227,16 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 			UIManager.ResetAllUI();
 			GetComponent<MouseInputController>().enabled = true;
 
-			if (!UIManager.Instance.playerListUIControl.window.activeInHierarchy)
+			if (!UIManager.Instance.statsTab.window.activeInHierarchy)
 			{
-				UIManager.Instance.playerListUIControl.window.SetActive(true);
+				UIManager.Instance.statsTab.window.SetActive(true);
 			}
 
 			PlayerManager.SetPlayerForControl(gameObject, PlayerSync);
 
 			if (IsGhost && !IsPlayerSemiGhost)
 			{
+				UIManager.LinkUISlots(ItemStorageLinkOrigin.adminGhost);
 				//stop the crit notification and change overlay to ghost mode
 				SoundManager.Stop("Critstate");
 				UIManager.PlayerHealthUI.heartMonitor.overlayCrits.SetState(OverlayState.death);
@@ -239,7 +248,7 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 			}
 			else if(!IsPlayerSemiGhost)
 			{
-				UIManager.LinkUISlots();
+				UIManager.LinkUISlots(ItemStorageLinkOrigin.localPlayer);
 				//play the spawn sound
 				SoundAmbientManager.PlayAudio("ambigen8");
 				//Hide ghosts
@@ -266,6 +275,7 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 	{
 		playerName = value;
 		gameObject.name = value;
+		RefreshVisibleName();
 	}
 
 	public bool IsHidden => !PlayerSync.ClientState.Active;
@@ -297,31 +307,43 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 
 	public object Chat { get; internal set; }
 
-	public bool IsInReach(GameObject go, bool isServer, float interactDist = interactionDistance)
+	public bool IsGameObjectReachable(GameObject go, bool isServer, float interactDist = interactionDistance, GameObject context=null)
 	{
 		var rt = go.RegisterTile();
 		if (rt)
 		{
-			return IsInReach(rt, isServer, interactDist);
+			return IsRegisterTileReachable(rt, isServer, interactDist, context: context);
 		}
 		else
 		{
-			return IsInReach(go.transform.position, isServer, interactDist);
+			return IsPositionReachable(go.transform.position, isServer, interactDist, context: context);
 		}
 	}
 
 	/// The smart way:
-	///  <inheritdoc cref="IsInReach(Vector3,float)"/>
-	public bool IsInReach(RegisterTile otherObject, bool isServer, float interactDist = interactionDistance)
+	///  <inheritdoc cref="IsPositionReachable(Vector3, bool, float, GameObject)"/>
+	public bool IsRegisterTileReachable(RegisterTile otherObject, bool isServer, float interactDist = interactionDistance, GameObject context=null)
 	{
-		return Validations.IsInReach(registerTile, otherObject, isServer, interactDist);
+		return Validations.IsReachableByRegisterTiles(registerTile, otherObject, isServer, interactDist, context: context);
 	}
 	///     Checks if the player is within reach of something
 	/// <param name="otherPosition">The position of whatever we are trying to reach</param>
+	/// <param name="isServer">True if being executed on server, false otherwise</param>
 	/// <param name="interactDist">Maximum distance of interaction between the player and other objects</param>
-	public bool IsInReach(Vector3 otherPosition, bool isServer, float interactDist = interactionDistance)
+	/// <param name="context">If not null, will ignore collisions caused by this gameobject</param>
+	public bool IsPositionReachable(Vector3 otherPosition, bool isServer, float interactDist = interactionDistance, GameObject context = null)
 	{
-		return Validations.IsInReach(isServer ? registerTile.WorldPositionServer : registerTile.WorldPositionClient, otherPosition, interactDist);
+		return Validations.IsReachableByPositions(isServer ? registerTile.WorldPositionServer : registerTile.WorldPositionClient, otherPosition, isServer, interactDist, context: context);
+	}
+
+	/// <summary>
+	/// Sets the IC name for this player and refreshes the visible name. Name will be kept if respawned.
+	/// </summary>
+	/// <param name="newName">The new name to give to the player.</param>
+	public void SetPermanentName(string newName)
+	{
+		characterSettings.Name = newName;
+		playerName = newName;
 	}
 
 	public ChatChannel GetAvailableChannelsMask(bool transmitOnly = true)
@@ -401,25 +423,19 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 	//Update visible name.
 	public void RefreshVisibleName()
 	{
-		// TODO: Check inventory for head/mask items that hide face - atm just check you are not wearing a mask.
-		// needs helmet/hideface trait to be added and checked for. This way, we start with a "face name" our characters might know...
-		if (ItemSlot.GetNamed(ItemStorage, NamedSlot.mask).IsEmpty)
+		string newVisibleName;
+
+		if (IsGhost || Equipment.IsIdentityObscured() == false)
 		{
-			SyncVisibleName(playerName, playerName);
+			newVisibleName = playerName; // can see face so real identity is known
 		}
 		else
 		{
-			SyncVisibleName("Unknown", "Unknown");
+			// Returns Unknown if identity could not be found via equipment (ID, PDA)
+			newVisibleName = Equipment.GetPlayerNameByEquipment();
 		}
 
-		// ...but if ID card is in belt slot, override with ID card data.
-		string idname = Equipment.GetIdentityFromID();
-		if (!String.Equals(idname, ""))
-		{
-			SyncVisibleName(idname, idname);
-		}
-
-
+		SyncVisibleName(newVisibleName, newVisibleName);
 	}
 
 	//Tooltips inspector bar
@@ -454,13 +470,15 @@ public class PlayerScript : ManagedNetworkBehaviour, IMatrixRotation, IAdminInfo
 	{
 		if (PlayerList.Instance.IsAntag(gameObject))
 		{
-			return $"<color=yellow>Name: {characterSettings.Name}\r\n" +
-				   $"Acc: {characterSettings.Username}\r\n" +
-				   $"Antag: True</color>";
+			return $"<color=yellow>Name: {characterSettings.Name}\n" +
+				   $"Acc: {characterSettings.Username}\n" +
+				   $"Antag: True \n" +
+				   "Objectives : "+ mind.GetAntag().GetObjectiveSummary() + "</color>";
+
 		}
 
-		return $"Name: {characterSettings.Name}\r\n" +
-			   $"Acc: {characterSettings.Username}\r\n" +
+		return $"Name: {characterSettings.Name}\n" +
+			   $"Acc: {characterSettings.Username}\n" +
 			   $"Antag: False";
 	}
 }

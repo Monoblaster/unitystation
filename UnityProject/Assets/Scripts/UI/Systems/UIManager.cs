@@ -4,6 +4,7 @@ using AdminTools;
 using Audio.Managers;
 using Initialisation;
 using Mirror;
+using UI.Core;
 using UI.Jobs;
 using UI.UI_Bottom;
 using UnityEngine;
@@ -11,6 +12,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 using UI.Core.Windows;
+using UI.Windows;
 
 public class UIManager : MonoBehaviour, IInitialise
 {
@@ -22,10 +24,13 @@ public class UIManager : MonoBehaviour, IInitialise
 	[FormerlySerializedAs("dragAndDrop")] public UIDragAndDrop uiDragAndDrop;
 	public ControlDisplays displayControl;
 	public ControlClothing controlClothing;
+	public PanelHudBottomController panelHudBottomController;
 	public Hands hands;
+	public ControlInternals internalControls;
+	public PlayerExaminationWindowUI playerExaminationWindow;
 	public ControlIntent intentControl;
 	public PlayerHealthUI playerHealthUI;
-	public PlayerListUI playerListUIControl;
+	public StatsTab statsTab;
 	public Text toolTip;
 	public Text pingDisplay;
 	[SerializeField]
@@ -33,7 +38,7 @@ public class UIManager : MonoBehaviour, IInitialise
 	public Text versionDisplay;
 	public GUI_Info infoWindow;
 	public TeleportWindow teleportWindow;
-	public ControlWalkRun walkRunControl;
+	[SerializeField] private GhostRoleWindow ghostRoleWindow = default;
 	public UI_StorageHandler storageHandler;
 	public BuildMenu buildMenu;
 	public ZoneSelector zoneSelector;
@@ -42,6 +47,7 @@ public class UIManager : MonoBehaviour, IInitialise
 	public GamePad gamePad;
 	public AnimationCurve strandedZoomOutCurve;
 	public AdminChatButtons adminChatButtons;
+	public AdminChatButtons mentorChatButtons;
 	public AdminChatWindows adminChatWindows;
 	public ProfileScrollView profileScrollView;
 	public PlayerAlerts playerAlerts;
@@ -139,20 +145,22 @@ public class UIManager : MonoBehaviour, IInitialise
 	//		public static ControlChat Chat => Instance.chatControl; //Use ChatRelay.Instance.AddToChatLog instead!
 	public static PlayerHealthUI PlayerHealthUI => Instance.playerHealthUI;
 
+	public static PlayerExaminationWindowUI PlayerExaminationWindow => Instance.playerExaminationWindow;
+
 	public static Hands Hands => Instance.hands;
 
 	public static ControlIntent Intent => Instance.intentControl;
+
+	public static ControlInternals Internals => Instance.internalControls;
 
 	public static ControlAction Action => Instance.actionControl;
 
 	public static UIDragAndDrop UiDragAndDrop => Instance.uiDragAndDrop;
 
-	public static ControlWalkRun WalkRun => Instance.walkRunControl;
-
 	public static ControlDisplays Display => Instance.displayControl;
 	public static ControlClothing ControlClothing => Instance.controlClothing;
 
-	public static PlayerListUI PlayerListUI => Instance.playerListUIControl;
+	public static StatsTab StatsTab => Instance.statsTab;
 
 	public static UI_StorageHandler StorageHandler
 	{
@@ -173,6 +181,7 @@ public class UIManager : MonoBehaviour, IInitialise
 	public static GUI_Info InfoWindow => Instance.infoWindow;
 
 	public static TeleportWindow TeleportWindow => Instance.teleportWindow;
+	public static GhostRoleWindow GhostRoleWindow => Instance.ghostRoleWindow;
 
 	private float pingUpdate;
 
@@ -241,6 +250,7 @@ public class UIManager : MonoBehaviour, IInitialise
 		}
 
 		adminChatButtons.transform.parent.gameObject.SetActive(false);
+		mentorChatButtons.transform.parent.gameObject.SetActive(false);
 		SetVersionDisplay = $"Work In Progress {GameData.BuildNumber}";
 	}
 
@@ -281,6 +291,7 @@ public class UIManager : MonoBehaviour, IInitialise
 	void OnSceneChange(Scene oldScene, Scene newScene)
 	{
 		adminChatButtons.ClearAllNotifications();
+		mentorChatButtons.ClearAllNotifications();
 		adminChatWindows.ResetAll();
 		playerAlerts.ClearLogs();
 	}
@@ -310,6 +321,55 @@ public class UIManager : MonoBehaviour, IInitialise
 			pingUpdate = 0f;
 			pingDisplay.text = $"ping: {(NetworkTime.rtt * 1000):0}ms";
 		}
+	}
+
+	public static void UpdateKeybindText(KeyAction keyAction, KeybindManager.KeyCombo keyCombo)
+	{
+		switch (keyAction)
+		{
+			case KeyAction.OpenBackpack:
+				Instance.panelHudBottomController.SetBackPackKeybindText(
+					FormatKeybind(keyCombo.MainKey)
+				);
+				break;
+			case KeyAction.OpenPDA:
+				Instance.panelHudBottomController.SetPDAKeybindText(
+					FormatKeybind(keyCombo.MainKey)
+				);
+				break;
+			case KeyAction.OpenBelt:
+				Instance.panelHudBottomController.SetBeltKeybindText(
+					FormatKeybind(keyCombo.MainKey)
+				);
+				break;
+			case KeyAction.PocketOne:
+				Instance.panelHudBottomController.SetPocketOneKeybindText(
+					FormatKeybind(keyCombo.MainKey)
+				);
+				break;
+			case KeyAction.PocketTwo:
+				Instance.panelHudBottomController.SetPocketTwoKeybindText(
+					FormatKeybind(keyCombo.MainKey)
+				);
+				break;
+			case KeyAction.PocketThree:
+				Instance.panelHudBottomController.SetPocketThreeKeybindText(
+					FormatKeybind(keyCombo.MainKey)
+				);
+				break;
+			default:
+				Logger.LogWarning($"There is no keybind text for KeyAction {keyAction}");
+				break;
+		}
+	}
+
+	private static string FormatKeybind(KeyCode key)
+	{
+		string result = key.ToString();
+		if (result.StartsWith("Alpha"))
+			return result[result.Length - 1].ToString();
+
+		return key.ToString();
 	}
 
 	public static void ToggleTTS(bool activeState)
@@ -449,12 +509,15 @@ public class UIManager : MonoBehaviour, IInitialise
 	/// <summary>
 	/// Links the UI slots to the spawned local player. Should only be called after local player has been spawned / set
 	/// </summary>
-	public static void LinkUISlots()
+	public static void LinkUISlots(ItemStorageLinkOrigin itemStorageLinkOrigin)
 	{
 		//link the UI slots to this player
 		foreach (var uiSlot in Instance.GetComponentsInChildren<UI_ItemSlot>(true))
 		{
-			uiSlot.LinkToLocalPlayer();
+			if (uiSlot.ItemStorageLinkOrigin == itemStorageLinkOrigin)
+			{
+				uiSlot.LinkToLocalPlayer();
+			}
 		}
 	}
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,7 +7,7 @@ using Pipes;
 
 namespace Pipes
 {
-	public class AirVent : MonoPipe
+	public class AirVent : MonoPipe, IServerSpawn
 	{
 		public bool SelfSufficient = false;
 
@@ -27,19 +28,14 @@ namespace Pipes
 			base.Start();
 		}
 
+		public void OnSpawnServer(SpawnInfo info)
+		{
+			metaDataLayer = MatrixManager.AtPoint(registerTile.WorldPositionServer, true).MetaDataLayer;
+			metaNode = metaDataLayer.Get(registerTile.LocalPositionServer, false);
+		}
+
 		public override void TickUpdate()
 		{
-			if (metaDataLayer == null)
-			{
-				metaDataLayer = MatrixManager.AtPoint(registerTile.WorldPositionServer, true).MetaDataLayer;
-			}
-
-			if (metaNode == null)
-			{
-				metaNode = metaDataLayer.Get(registerTile.LocalPositionServer, false);
-			}
-
-
 			base.TickUpdate();
 			pipeData.mixAndVolume.EqualiseWithOutputs(pipeData.Outputs);
 			CheckAtmos();
@@ -47,66 +43,54 @@ namespace Pipes
 
 		private void CheckAtmos()
 		{
+			// FIXME I'm just handling the exception here, I'm no atmos nerd so I don't know what's happening.
+			// maybe it is just an initialization order problem?
+			if (metaNode == null)
+			{
+				Logger.LogError("Airvent found metadaNode to be null. Returning with no op.", Category.Atmos);
+				return;
+			}
+
 			//metaNode.GasMix = pipeData.mixAndVolume.EqualiseWithExternal(metaNode.GasMix);
 			if (metaNode.GasMix.Pressure > MaxOutletPressure)
 			{
 				return;
 			}
 
-			float Available = 0;
+			float molesTransferred;
 
 			if (metaNode.GasMix.Pressure != 0)
 			{
-				Available =	((MaxOutletPressure / metaNode.GasMix.Pressure) * metaNode.GasMix.Moles) - metaNode.GasMix.Moles;
-			}
-			else
-			{
-				Available = MaxTransferMoles;
-			}
-
-
-
-
-			if (MaxTransferMoles < Available)
-			{
-				Available = MaxTransferMoles;
-			}
-
-			if (SelfSufficient)
-			{
-				if (Available > GasMixes.Air.Moles)
+				molesTransferred =	((MaxOutletPressure / metaNode.GasMix.Pressure) * metaNode.GasMix.Moles) - metaNode.GasMix.Moles;
+				if (MaxTransferMoles < molesTransferred)
 				{
-					Available = GasMixes.Air.Moles;
+					molesTransferred = MaxTransferMoles;
 				}
 			}
 			else
 			{
-				if (Available > pipeData.mixAndVolume.Total.y)
-				{
-					Available = pipeData.mixAndVolume.Total.y;
-				}
+				molesTransferred = MaxTransferMoles;
 			}
 
-			var Gasonnnode = metaNode.GasMix;
-			var pipeMix = new GasMix(GasMixes.Empty);
+			GasMix pipeMix;
 			if (SelfSufficient)
 			{
-				pipeMix = new GasMix(GasMixes.Air);
+				pipeMix = GasMix.NewGasMix(GasMixes.Air); //TODO: get some immutable gasmix to avoid GC
+				if (molesTransferred > GasMixes.Air.Moles)
+				{
+					molesTransferred = GasMixes.Air.Moles;
+				}
+
 			}
 			else
 			{
 				pipeMix = pipeData.mixAndVolume.GetGasMix();
+				if (molesTransferred > pipeMix.Moles)
+				{
+					molesTransferred = pipeMix.Moles;
+				}
 			}
-
-
-			var TransferringGas = pipeMix.RemoveMoles(Available);
-			if (!SelfSufficient)
-			{
-				pipeData.mixAndVolume.SetGasMix(pipeMix);
-			}
-
-
-			metaNode.GasMix = (Gasonnnode + TransferringGas);
+			GasMix.TransferGas(metaNode.GasMix, pipeMix, molesTransferred);
 			metaDataLayer.UpdateSystemsAt(registerTile.LocalPositionServer, SystemType.AtmosSystem);
 		}
 	}

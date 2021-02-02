@@ -6,12 +6,13 @@ namespace Systems.Atmospherics
 {
 	public class FreonFireReaction : Reaction
 	{
+		private static System.Random rnd = new System.Random();
 		public bool Satisfies(GasMix gasMix)
 		{
 			throw new System.NotImplementedException();
 		}
 
-		public float React(ref GasMix gasMix, Vector3 tilePos)
+		public void React(GasMix gasMix, Vector3 tilePos, Matrix matrix)
 		{
 			var energyReleased = 0f;
 			var oldHeatCap = gasMix.WholeHeatCapacity;
@@ -52,9 +53,9 @@ namespace Systems.Atmospherics
 
 					gasMix.AddGas(Gas.CarbonDioxide, freonBurnRate);
 
-					if (gasMix.Temperature < 160 && gasMix.Temperature > 120 && UnityEngine.Random.Range(0, 2) == 0)
+					if (gasMix.Temperature < 160 && gasMix.Temperature > 120 && rnd.Next(0, 2) == 0)
 					{
-						Spawn.ServerPrefab(AtmosManager.Instance.hotIce, tilePos, MatrixManager.GetDefaultParent(tilePos, true));
+						SpawnSafeThread.SpawnPrefab(tilePos, AtmosManager.Instance.hotIce);
 					}
 
 					energyReleased += AtmosDefines.FIRE_FREON_ENERGY_RELEASED * freonBurnRate;
@@ -69,8 +70,6 @@ namespace Systems.Atmospherics
 					gasMix.SetTemperature((gasMix.Temperature * oldHeatCap + energyReleased) / newHeatCap);
 				}
 			}
-
-			return 0f;
 		}
 	}
 }

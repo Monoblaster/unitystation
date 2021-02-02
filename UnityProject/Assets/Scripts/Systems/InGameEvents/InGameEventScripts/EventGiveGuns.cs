@@ -1,19 +1,19 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Managers;
 using UnityEngine;
+using ScriptableObjects;
+using Strings;
 
 namespace InGameEvents
 {
 	public class EventGiveGuns : EventScriptBase
 	{
 		[SerializeField]
-		private List<GameObject> gunList = new List<GameObject>();
+		private GameObjectList gunList = default;
 
 		public override void OnEventStart()
 		{
-
-
-
 			if (!FakeEvent)
 			{
 				SpawnGuns();
@@ -22,28 +22,36 @@ namespace InGameEvents
 			base.OnEventStart();
 		}
 
-		private void SpawnGuns()
+		protected void SpawnGuns()
 		{
-			if (gunList.Count == 0) return;
+			if (gunList == null || gunList.GameObjectPrefabs.Length == 0)
+			{
+				Logger.LogError($"No guns in gun list! Cannot spawn guns for {nameof(EventGiveGuns)}.");
+				return;
+			}
 
-			foreach (var player in PlayerList.Instance.InGamePlayers)
+			foreach (ConnectedPlayer player in PlayerList.Instance.InGamePlayers)
 			{
 				if (player.Script.IsDeadOrGhost) continue;
 
-				var slot = player.Script.Equipment.ItemStorage.GetActiveHandSlot();
+				HandlePlayer(player);
+			}
+		}
 
-				if (slot == null) continue;
+		protected virtual void HandlePlayer(ConnectedPlayer player)
+		{
+			GiveGunToPlayer(player);
+		}
 
-				if (slot.Item == null)
-				{
-					var gun = Spawn.ServerPrefab(gunList[UnityEngine.Random.Range(0, gunList.Count)], player.Script.WorldPos, player.Script.gameObject.transform.parent, player.Script.transform.rotation);
+		protected void GiveGunToPlayer(ConnectedPlayer player)
+		{
+			GameObject gun = Spawn.ServerPrefab(gunList.GetRandom(),
+						player.Script.WorldPos, player.Script.transform.parent, player.Script.transform.rotation).GameObject;
 
-					Inventory.ServerAdd(gun.GameObject.GetComponent<Pickupable>(), slot);
-				}
-				else
-				{
-					Spawn.ServerPrefab(gunList[UnityEngine.Random.Range(0, gunList.Count)], player.Script.WorldPos, player.Script.gameObject.transform.parent, player.Script.transform.rotation);
-				}
+			ItemSlot slot = player.Script.ItemStorage.GetBestHandOrSlotFor(gun);
+			if (slot != null && slot.IsEmpty)
+			{
+				Inventory.ServerAdd(gun, slot);
 			}
 		}
 
@@ -53,7 +61,7 @@ namespace InGameEvents
 			{
 				var text = "Incoming Report:\nA weapons convoy got caught in a blue space anomaly near your location. ";
 
-				CentComm.MakeAnnouncement(CentComm.CentCommAnnounceTemplate, text, CentComm.UpdateSound.alert);
+				CentComm.MakeAnnouncement(ChatTemplates.CentcomAnnounce, text, CentComm.UpdateSound.Alert);
 			}
 		}
 	}

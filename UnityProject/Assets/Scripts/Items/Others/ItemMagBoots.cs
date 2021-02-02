@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Items;
 using UnityEngine;
 using Mirror;
 using UI.Action;
@@ -38,13 +39,11 @@ public class ItemMagBoots : NetworkBehaviour, IServerInventoryMove
 
 	private void OnEnable()
 	{
-		actionButton.ClientActionClicked += ClientUpdateActionSprite;
 		actionButton.ServerActionClicked += ToggleState;
 	}
 
 	private void OnDisable()
 	{
-		actionButton.ClientActionClicked -= ClientUpdateActionSprite;
 		actionButton.ServerActionClicked -= ToggleState;
 	}
 
@@ -77,11 +76,6 @@ public class ItemMagBoots : NetworkBehaviour, IServerInventoryMove
 		{
 			ToggleOn();
 		}
-	}
-
-	private void ClientUpdateActionSprite()
-	{
-		spriteHandler.ChangeSprite(isOn ? (int) SpriteState.Off : (int) SpriteState.On);
 	}
 
 	private void ToggleOn()

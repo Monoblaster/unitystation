@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class ChatEntry : MonoBehaviour
 {
@@ -136,7 +137,7 @@ public class ChatEntry : MonoBehaviour
 
 	void CheckPosition()
 	{
-		if(waitToCheck != null) StopCoroutine(waitToCheck);
+		if (waitToCheck != null) StopCoroutine(waitToCheck);
 		waitToCheck = StartCoroutine(WaitToCheckPos());
 	}
 
@@ -148,7 +149,7 @@ public class ChatEntry : MonoBehaviour
 		float entryYPositionOutsideChatFeedParent = transform.localPosition.y + transform.parent.localPosition.y;
 
 		// Check to see if the chat entry is inside the VIEWPORT thresholds, and if so we will enable viewing it.
-		if (entryYPositionOutsideChatFeedParent > thresholdMarkerBottom.localPosition.y && entryYPositionOutsideChatFeedParent < thresholdMarkerTop.localPosition.y) 
+		if (entryYPositionOutsideChatFeedParent > thresholdMarkerBottom.localPosition.y && entryYPositionOutsideChatFeedParent < thresholdMarkerTop.localPosition.y)
 		{
 			ToggleUIElements(true);
 		}
@@ -338,7 +339,7 @@ public class ChatEntry : MonoBehaviour
 
 		TextGenerator textGen = new TextGenerator(_text.Length);
 		Vector2 extents = visibleText.gameObject.GetComponent<RectTransform>().rect.size;
-		textGen.Populate(_text, visibleText.GetGenerationSettings(extents));
+		//textGen.Populate(_text, visibleText.GetGenerationSettings(extents));
 		if (textGen.vertexCount == 0)
 		{
 			return;

@@ -2,6 +2,7 @@
 using NaughtyAttributes;
 using ScriptableObjects;
 using TileManagement;
+using AddressableReferences;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
@@ -9,7 +10,10 @@ using UnityEngine.Tilemaps;
 public abstract class BasicTile : LayerTile
 {
 	[Tooltip("What it sounds like when walked over")] [ShowIf(nameof(passable))]
-	public FloorTileType floorTileType = FloorTileType.floor;
+	public FloorSounds floorTileSounds;
+
+	[Tooltip("can the sounds specified be overridden by objects like clown shoes")]
+	public bool CanSoundOverride = false;
 
 	[Tooltip("Allow gases to pass through the cell this tile occupies?")]
 	[FormerlySerializedAs("AtmosPassable")]
@@ -104,9 +108,9 @@ public abstract class BasicTile : LayerTile
 
 	public LootOnDespawn LootOnDespawn => lootOnDespawn;
 
-	[SerializeField] private string soundOnHit = default;
+	[SerializeField] private AddressableAudioSource soundOnHit = null;
 
-	public string SoundOnHit => soundOnHit;
+	public AddressableAudioSource SoundOnHit => soundOnHit;
 
 	public override void RefreshTile(Vector3Int position, ITilemap tilemap)
 	{
@@ -121,7 +125,7 @@ public abstract class BasicTile : LayerTile
 	/// It will return the default Passable bool unless an exception is avalaible in PassableException
 	/// </summary>
 	/// <param name="colliderType"></param>
-	/// <returns>IsPassable</returns>
+	/// <returns>IsPassableFromOutside</returns>
 	public bool IsPassable(CollisionType colliderType, Vector3Int origin, MetaTileMap metaTileMap)
 	{
 		if (this.LayerType == LayerType.Tables)

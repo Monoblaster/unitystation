@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Items;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Events;
@@ -93,6 +94,11 @@ public class ItemSlot
 	public bool IsOccupied => !IsEmpty;
 
 	/// <summary>
+	/// To mark is not as unable to take anything used for UI
+	/// </summary>
+	public bool IsEnabled = true;
+
+	/// <summary>
 	/// If this item slot is linked to the local player's UI slot, returns that UI slot. Otherwise
 	/// returns null.
 	/// </summary>
@@ -109,6 +115,8 @@ public class ItemSlot
 	/// </summary>
 	public bool Invalid => invalid;
 	private bool invalid;
+
+
 
 	/// <summary>
 	/// Server-side only. Players server thinks are currently looking at this slot (and thus will receive
@@ -312,10 +320,11 @@ public class ItemSlot
 	public bool CanFit(Pickupable toStore, bool ignoreOccupied = false, GameObject examineRecipient = null)
 	{
 		if (toStore == null) return false;
+		if (IsEnabled == false) return false;
 
 		ItemStorage storageToCheck = itemStorage;
 		StorageIdentifier storeIdentifier = toStore.GetComponent<StorageIdentifier>();
-		
+
 		//Check if there is a deny entry for this toStore item
 		if (storageToCheck != null && storeIdentifier != null)
 		{
@@ -391,6 +400,8 @@ public class ItemSlot
 			}
 			return stackResult;
 		}
+
+
 
 		//no item in slot and no inventory loop created,
 		//check if this storage can fit this according to its specific capacity logic

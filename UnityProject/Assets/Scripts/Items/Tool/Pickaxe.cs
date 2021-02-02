@@ -1,11 +1,13 @@
 
 using UnityEngine;
+using AddressableReferences;
 
 /// <summary>
 /// Allows object to be used as a pickaxe to mine rocks.
 /// </summary>
 public class Pickaxe : MonoBehaviour, ICheckedInteractable<PositionalHandApply>
 {
+	[SerializeField] private AddressableAudioSource pickaxeSound = null;
 	private static readonly StandardProgressActionConfig ProgressConfig =
 		new StandardProgressActionConfig(StandardProgressActionType.Construction, true);
 
@@ -37,7 +39,7 @@ public class Pickaxe : MonoBehaviour, ICheckedInteractable<PositionalHandApply>
 				5f, interaction.Performer);
 		if (bar != null)
 		{
-			SoundManager.PlayNetworkedAtPos("pickaxe#", interaction.WorldPositionTarget, sourceObj: interaction.Performer);
+			SoundManager.PlayNetworkedAtPos(pickaxeSound, interaction.WorldPositionTarget, sourceObj: interaction.Performer);
 		}
 	}
 
@@ -50,7 +52,7 @@ public class Pickaxe : MonoBehaviour, ICheckedInteractable<PositionalHandApply>
 		}
 		else
 		{
-			SoundManager.PlayNetworkedAtPos("BreakStone", interaction.WorldPositionTarget, sourceObj: interaction.Performer);
+			SoundManager.PlayNetworkedAtPos(SingletonSOSounds.Instance.BreakStone, interaction.WorldPositionTarget, sourceObj: interaction.Performer);
 			var cellPos = interactableTiles.MetaTileMap.WorldToCell(interaction.WorldPositionTarget);
 
 			var tile = interactableTiles.LayerTileAt(interaction.WorldPositionTarget) as BasicTile;

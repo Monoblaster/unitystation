@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4003879732099956}
   - component: {fileID: 212360857505739792}
+  - component: {fileID: 2200355187901365339}
   m_Layer: 0
   m_Name: Sprite
   m_TagString: Untagged
@@ -46,6 +47,7 @@ SpriteRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
@@ -68,7 +70,7 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 142874271
-  m_SortingLayer: 10
+  m_SortingLayer: 12
   m_SortingOrder: 1
   m_Sprite: {fileID: 21300000, guid: a04b8478cd5128343955dfd27c1e107f, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -81,6 +83,31 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &2200355187901365339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1436691669501954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db025f3627a11af4fb670ccd1e2188ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  NetworkThis: 1
+  SubCatalogue:
+  - {fileID: 11400000, guid: 2eb2447d130efe249a31999049d66d10, type: 2}
+  - {fileID: 11400000, guid: 5fa94bf72f1f35b4ba953a9c950dd146, type: 2}
+  - {fileID: 11400000, guid: 685ad63ad497a884091a906925a2e525, type: 2}
+  - {fileID: 11400000, guid: 0755a74700d5b3a4ebf817369ab29d01, type: 2}
+  - {fileID: 11400000, guid: ecb8e57d160749b4d96a1a9b89bfead5, type: 2}
+  PresentSpriteSet: {fileID: 11400000, guid: 0755a74700d5b3a4ebf817369ab29d01, type: 2}
+  randomInitialSprite: 0
+  pushTextureOnStartUp: 1
+  variantIndex: 0
+  palette: []
+  Sprites: []
 --- !u!1 &1711816394935574
 GameObject:
   m_ObjectHideFlags: 0
@@ -96,7 +123,6 @@ GameObject:
   - component: {fileID: 114657711786529776}
   - component: {fileID: 5322609074420117545}
   - component: {fileID: 2464575245303528366}
-  - component: {fileID: 5293454678208234974}
   - component: {fileID: 114532654656294352}
   - component: {fileID: 114039584032850022}
   - component: {fileID: 4585042576726451927}
@@ -166,7 +192,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isMeleeable: 1
   butcherTime: 2
-  butcherSound: BladeSlice
+  butcherSound:
+    SetLoadSetting: 0
+    AssetAddress: Assets/Prefabs/AmbientTracks/Ambient04.prefab
+    AssetReference:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
 --- !u!114 &9128197607768152992
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,27 +216,40 @@ MonoBehaviour:
   initialContents: {fileID: 0}
   lockLight: {fileID: 0}
   IsLockable: 0
+  hideLockWhenOpened: 1
   playerLimit: 1
+  breakoutTime: 120
   matsOnDestroy: {fileID: 0}
   matsDroppedOnDestroy: 2
-  soundOnOpenOrClose: OpenClose
-  doorOpened: {fileID: 21300000, guid: fe32ef034620a70419a70fce6f2e99ef, type: 3}
-  spriteRenderer: {fileID: 212360857505739792}
+  soundOnOpenOrClose:
+    SetLoadSetting: 0
+    AssetAddress: Assets/Prefabs/Effects/OpenClose.prefab
+    AssetReference:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
+  soundOnEmag:
+    SetLoadSetting: 0
+    AssetAddress: Assets/Prefabs/Effects/SnapCracklePop2.prefab
+    AssetReference:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
+  soundOnEscape:
+    SetLoadSetting: 0
+    AssetAddress: Assets/Prefabs/Effects/Rustle01.prefab
+    AssetReference:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
+  doorSpriteHandler: {fileID: 2200355187901365339}
+  lockOverlay: {fileID: 0}
+  isEmagged: 0
+  weldOverlay: {fileID: 0}
+  weldSprite: {fileID: 0}
   occupant: {fileID: 0}
   statusString: 
-  openUnPoweredSprite: {fileID: 21300000, guid: adbd8f0ee776c3f409f3d3b0b60c6916,
-    type: 3}
-  openPoweredSprite: {fileID: 21300000, guid: e5496b09241b8cb4f97de9c4026f904c, type: 3}
-  closedUnPoweredSprite: {fileID: 21300000, guid: d576437aea8f9b04a80ff4fd7f9a5dc0,
-    type: 3}
-  closedPoweredSprite: {fileID: 21300000, guid: a04b8478cd5128343955dfd27c1e107f,
-    type: 3}
-  closedPoweredWithOccupant:
-  - {fileID: 21300000, guid: cdec23d93e162af4e8ed5aa7056020f9, type: 3}
-  - {fileID: 21300002, guid: cdec23d93e162af4e8ed5aa7056020f9, type: 3}
-  - {fileID: 21300004, guid: cdec23d93e162af4e8ed5aa7056020f9, type: 3}
-  - {fileID: 21300006, guid: cdec23d93e162af4e8ed5aa7056020f9, type: 3}
-  animSpeed: 0.13
+  RelatedAPC: {fileID: 0}
 --- !u!114 &114657711786529776
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238,7 +283,13 @@ MonoBehaviour:
   registerTile: {fileID: 0}
   floorDecal: {fileID: 0}
   isInitiallyNotPushable: 1
-  pushPullSound: 
+  pushPullSound:
+    SetLoadSetting: 0
+    AssetAddress: null
+    AssetReference:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
   soundDelayTime: 0
   soundMinimumPitchVariance: 1
   soundMaximumPitchVariance: 1
@@ -263,23 +314,9 @@ MonoBehaviour:
   objectType: 1
   AtmosPassable: 1
   Passable: 0
+  ReachableThrough: 1
+  passableExclusionsToThis: []
   closetType: 2
---- !u!114 &5293454678208234974
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1711816394935574}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d54c3d183673c904882b6d1e8484ca73, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nameOverride: 
-  backgroundColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  iconOverride: {fileID: 0}
-  backgroundSprite: {fileID: 0}
 --- !u!114 &114532654656294352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -308,7 +345,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  soundOnHit: 
+  initialIntegrity: 100
+  soundOnHit:
+    SetLoadSetting: 0
+    AssetAddress: Assets/Prefabs/AmbientTracks/Ambient04.prefab
+    AssetReference:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
+  damageDeflection: 0
   Armor:
     Melee: 0
     Bullet: 0
@@ -329,7 +374,6 @@ MonoBehaviour:
     Indestructable: 0
     FreezeProof: 0
   HeatResistance: 100
-  initialIntegrity: 100
 --- !u!114 &4585042576726451927
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -344,18 +388,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  MinimumWorkingVoltage: 190
-  ExpectedRunningVoltage: 240
-  MaximumWorkingVoltage: 300
+  minimumWorkingVoltage: 190
+  expectedRunningVoltage: 240
+  maximumWorkingVoltage: 300
   deviceType: 0
   isSelfPowered: 0
   wattusage: 0.01
-  Resistance: 100000000
+  resistance: 100000000
   RelatedAPC: {fileID: 0}
   AdvancedControlToScript: 0
   StateUpdateOnClient: 1
-  SelfPowered: 0
-  State: 0
   conType: 1
 --- !u!114 &114261379763110518
 MonoBehaviour:

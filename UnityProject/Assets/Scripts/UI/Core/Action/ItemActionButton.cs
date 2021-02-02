@@ -34,6 +34,16 @@ namespace UI.Action
 		private void Awake()
 		{
 			pickupable = GetComponent<Pickupable>();
+
+			if(useSpriteHandler)
+			{
+				spriteHandler.OnSpriteDataSOChanged += SpriteHandlerSOChanged;
+			}
+		}
+
+		private void SpriteHandlerSOChanged(SpriteDataSO obj)
+		{
+			UIActionManager.SetSpriteSO(this, spriteHandler.GetCurrentSpriteSO(), false, spriteHandler.Palette);
 		}
 
 		public void CallActionClient()
@@ -59,7 +69,7 @@ namespace UI.Action
 			bool shouldShow = ShouldShowButton(info);
 			ClientSetActionButtonVisibility(shouldShow);
 
-			if (PlayerManager.LocalPlayerScript == null) return;
+			if (PlayerManager.LocalPlayerScript == null || PlayerManager.LocalPlayerScript.playerHealth == null) return;
 			if (shouldShow)
 			{
 				PlayerManager.LocalPlayerScript.playerHealth.OnDeathNotifyEvent += OnDeath;

@@ -12,7 +12,6 @@ namespace Weapons
 	/// </summary>
 	public class ShootMessage : ServerMessage
 	{
-
 		/// <summary>
 		/// GameObject of the player performing the shot
 		/// </summary>
@@ -20,7 +19,7 @@ namespace Weapons
 		/// <summary>
 		/// Weapon being used to perform the shot
 		/// </summary>
-		public uint Projectile;
+		public uint Weapon;
 		/// <summary>
 		/// Direction of shot, originating from Shooter)
 		/// </summary>
@@ -33,6 +32,14 @@ namespace Weapons
 		/// If the shot is aimed at the shooter
 		/// </summary>
 		public bool IsSuicideShot;
+		/// <summary>
+		/// Name of the projectile
+		/// </summary>
+		public string ProjectileName;
+		/// <summary>
+		/// Amount of projectiles
+		/// </summary>
+		public int Quantity;
 
 		///To be run on client
 		public override void Process()
@@ -49,17 +56,18 @@ namespace Weapons
 			//Not even spawned don't show bullets
 			if (PlayerManager.LocalPlayer == null) return;
 
-			LoadMultipleObjects(new [] { Shooter, Projectile });
+			LoadMultipleObjects(new uint[] { Shooter, Weapon});
 
 			Gun wep = NetworkObjects[1].GetComponent<Gun>();
 			if (wep == null)
 			{
 				return;
 			}
+
 			//only needs to run on the clients other than the shooter
 			if (!wep.isServer && PlayerManager.LocalPlayer.gameObject != NetworkObjects[0])
 			{
-				wep.DisplayShot(NetworkObjects[0], Direction, DamageZone, IsSuicideShot);
+				wep.DisplayShot(NetworkObjects[0], Direction, DamageZone, IsSuicideShot, ProjectileName, Quantity);
 			}
 		}
 
@@ -71,15 +79,17 @@ namespace Weapons
 		/// <param name="shooter">gameobject of player making the shot</param>
 		/// <param name="isSuicide">if the shooter is shooting themselves</param>
 		/// <returns></returns>
-		public static ShootMessage SendToAll(Vector2 direction, BodyPartType damageZone, GameObject shooter, GameObject weapon, bool isSuicide)
+		public static ShootMessage SendToAll(Vector2 direction, BodyPartType damageZone, GameObject shooter, GameObject weapon, bool isSuicide, string projectileName, int quantity)
 		{
 			var msg = new ShootMessage
 			{
-				Projectile = weapon ? weapon.GetComponent<NetworkIdentity>().netId : NetId.Invalid,
+				Weapon = weapon ? weapon.GetComponent<NetworkIdentity>().netId : NetId.Invalid,
 				Direction = direction,
 				DamageZone = damageZone,
 				Shooter = shooter ? shooter.GetComponent<NetworkIdentity>().netId : NetId.Invalid,
-				IsSuicideShot = isSuicide
+				IsSuicideShot = isSuicide,
+				ProjectileName = projectileName,
+				Quantity = quantity
 			};
 			msg.SendToAll();
 			return msg;
@@ -88,26 +98,6 @@ namespace Weapons
 		public override string ToString()
 		{
 			return " ";
-		}
-
-		public override void Deserialize(NetworkReader reader)
-		{
-			base.Deserialize(reader);
-			Projectile = reader.ReadUInt32();
-			Direction = reader.ReadVector2();
-			DamageZone = (BodyPartType)reader.ReadUInt32();
-			Shooter = reader.ReadUInt32();
-			IsSuicideShot = reader.ReadBoolean();
-		}
-
-		public override void Serialize(NetworkWriter writer)
-		{
-			base.Serialize(writer);
-			writer.WriteUInt32(Projectile);
-			writer.WriteVector2(Direction);
-			writer.WriteInt32((int)DamageZone);
-			writer.WriteUInt32(Shooter);
-			writer.WriteBoolean(IsSuicideShot);
 		}
 	}
 
@@ -138,7 +128,9 @@ namespace Weapons
 		///To be run on client
 		public override void Process()
 		{
-			if (!MatrixManager.IsInitialized) return;
+			if (CustomNetworkManager.IsServer) return; // Processed serverside in SendToAll
+
+			if (MatrixManager.IsInitialized == false) return;
 
 			if (Shooter.Equals(NetId.Invalid))
 			{
@@ -148,24 +140,29 @@ namespace Weapons
 			}
 
 			//Not even spawned don't show bullets
-			if (CustomNetworkManager.IsServer == false && PlayerManager.LocalPlayer == null) return;
+			if (PlayerManager.LocalPlayer == null) return;
 
 			LoadNetworkObject(Shooter);
 			GameObject shooter = NetworkObject;
 
-			if (!ClientScene.prefabs.TryGetValue(ProjectilePrefab, out var prefab))
+			if (ClientScene.prefabs.TryGetValue(ProjectilePrefab, out var prefab) == false)
 			{
 				Logger.LogError($"Couldn't cast {ProjectilePrefab}; it is probably missing {nameof(NetworkIdentity)} component.", Category.Firearms);
 				return;
 			}
 
+			ShootProjectile(prefab, shooter, Direction, DamageZone);
+		}
+
+		private static void ShootProjectile(GameObject prefab, GameObject shooter, Vector2 direction, BodyPartType damageZone)
+		{
 			GameObject projectile = UnityEngine.Object.Instantiate(prefab, shooter.transform.position, Quaternion.identity);
 
 			if (projectile == null) return;
 			Bullet bullet = projectile.GetComponent<Bullet>();
 			if (bullet == null) return;
 
-			bullet.Shoot(Direction, shooter, null, DamageZone);
+			bullet.Shoot(direction, shooter, null, damageZone);
 		}
 
 		/// <summary>
@@ -178,6 +175,11 @@ namespace Weapons
 		/// <returns></returns>
 		public static CastProjectileMessage SendToAll(GameObject shooter, GameObject projectilePrefab, Vector2 direction, BodyPartType damageZone)
 		{
+			if (CustomNetworkManager.IsServer)
+			{
+				ShootProjectile(projectilePrefab, shooter, direction, damageZone);
+			}
+
 			Guid assetID;
 			if (projectilePrefab.TryGetComponent<NetworkIdentity>(out var networkIdentity))
 			{
@@ -197,24 +199,6 @@ namespace Weapons
 			};
 			msg.SendToAll();
 			return msg;
-		}
-
-		public override void Deserialize(NetworkReader reader)
-		{
-			base.Deserialize(reader);
-			Shooter = reader.ReadUInt32();
-			ProjectilePrefab = reader.ReadGuid();
-			Direction = reader.ReadVector2();
-			DamageZone = (BodyPartType)reader.ReadUInt32();
-		}
-
-		public override void Serialize(NetworkWriter writer)
-		{
-			base.Serialize(writer);
-			writer.WriteUInt32(Shooter);
-			writer.WriteGuid(ProjectilePrefab);
-			writer.WriteVector2(Direction);
-			writer.WriteInt32((int)DamageZone);
 		}
 	}
 }

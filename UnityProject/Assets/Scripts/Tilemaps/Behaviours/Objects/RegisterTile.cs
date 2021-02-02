@@ -287,8 +287,9 @@ public class RegisterTile : NetworkBehaviour, IServerDespawn
 		//cancel all relationships
 		if (sameMatrixRelationships != null)
 		{
-			foreach (var relationship in sameMatrixRelationships)
+			for (int i = sameMatrixRelationships.Count-1; i >= 0; i--)
 			{
+				var relationship = sameMatrixRelationships[i];
 				Logger.LogTraceFormat("Cancelling spatial relationship {0} because {1} is despawning.",
 					Category.SpatialRelationship, relationship, this);
 				SpatialRelationship.ServerEnd(relationship);
@@ -297,8 +298,9 @@ public class RegisterTile : NetworkBehaviour, IServerDespawn
 
 		if (crossMatrixRelationships != null)
 		{
-			foreach (var relationship in crossMatrixRelationships)
+			for (int i = crossMatrixRelationships.Count - 1; i >= 0; i--)
 			{
+				var relationship = crossMatrixRelationships[i];
 				Logger.LogTraceFormat("Cancelling spatial relationship {0} because {1} is despawning.",
 					Category.SpatialRelationship, relationship, this);
 				SpatialRelationship.ServerEnd(relationship);
@@ -750,15 +752,20 @@ public class RegisterTile : NetworkBehaviour, IServerDespawn
 	}
 
 	///<summary> Is it passable when approaching from outside? </summary>
-	public virtual bool IsPassable(Vector3Int enteringFrom, bool isServer, GameObject context = null)
+	public virtual bool IsPassableFromOutside(Vector3Int enteringFrom, bool isServer, GameObject context = null)
 	{
 		return true;
 	}
 
 	/// <summary> Is it passable when trying to leave it? </summary>
-	public virtual bool IsPassableTo(Vector3Int leavingTo, bool isServer, GameObject context = null)
+	public virtual bool IsPassableFromInside(Vector3Int leavingTo, bool isServer, GameObject context = null)
 	{
 		return true;
+	}
+
+	public virtual bool IsReachableThrough(Vector3Int reachingFrom, bool isServer, GameObject context = null)
+	{
+		return false;
 	}
 
 	///<summary> Is it passable when approaching from outside? </summary>

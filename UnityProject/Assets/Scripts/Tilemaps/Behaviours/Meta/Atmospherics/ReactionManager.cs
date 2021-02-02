@@ -31,7 +31,7 @@ namespace Systems.Atmospherics
 		private MetaDataLayer metaDataLayer;
 		private Matrix matrix;
 
-		private Dictionary<Vector3Int, MetaDataNode> hotspots;
+		private ConcurrentDictionary<Vector3Int, MetaDataNode> hotspots;
 		private UniqueQueue<MetaDataNode> winds;
 
 		private UniqueQueue<FogEffect> addFog; //List of tiles to add chemcial fx to
@@ -44,7 +44,7 @@ namespace Systems.Atmospherics
 		private TilemapDamage[] tilemapDamages;
 
 		private float timePassed;
-		private float timePassed2;
+		private int reactionTick;
 
 		/// <summary>
 		/// reused when applying exposures to lots of tiles to avoid creating GC from
@@ -58,7 +58,7 @@ namespace Systems.Atmospherics
 			metaDataLayer = GetComponent<MetaDataLayer>();
 			matrix = GetComponent<Matrix>();
 
-			hotspots = new Dictionary<Vector3Int, MetaDataNode>();
+			hotspots = new ConcurrentDictionary<Vector3Int, MetaDataNode>();
 			winds = new UniqueQueue<MetaDataNode>();
 
 			addFog = new UniqueQueue<FogEffect>();
@@ -74,13 +74,11 @@ namespace Systems.Atmospherics
 		private void Start()
 		{
 			fireLight = AtmosManager.Instance.fireLight;
+			AtmosThread.reactionManagerList.Add(this);
 		}
 
 		private void Update()
 		{
-			timePassed += Time.deltaTime;
-			timePassed2 += Time.deltaTime;
-
 			#region wind
 
 			Profiler.BeginSample("Wind");
@@ -134,50 +132,8 @@ namespace Systems.Atmospherics
 					}
 				}
 			}
-
-			timePassed2 = 0;
-
 			Profiler.EndSample();
-
 			#endregion
-
-			if (timePassed < 0.5)
-			{
-				return;
-			}
-
-
-			//process the current hotspots, potentially adding new ones and removing ones that have expired.
-			//(but we actually perform the add / remove after this loop so we don't concurrently modify the dict)
-			foreach (MetaDataNode node in hotspots.Values)
-			{
-				if (node.Hotspot != null)
-				{
-					if (node.Hotspot.Process())
-					{
-						if (node.Hotspot.Volume > 0.95 * node.GasMix.Volume)
-						{
-							for (var i = 0; i < node.Neighbors.Length; i++)
-							{
-								MetaDataNode neighbor = node.Neighbors[i];
-
-								if (neighbor != null)
-								{
-									ExposeHotspot(node.Neighbors[i].Position, node.GasMix.Temperature * 0.85f,
-										node.GasMix.Volume / 4);
-								}
-							}
-						}
-					}
-					else
-					{
-						Profiler.BeginSample("MarkForRemoval");
-						RemoveHotspot(node);
-						Profiler.EndSample();
-					}
-				}
-			}
-
 
 			Profiler.BeginSample("HotspotModify");
 			//perform the actual logic that needs to happen for adding / removing hotspots that have been
@@ -185,12 +141,12 @@ namespace Systems.Atmospherics
 			foreach (var addedHotspot in hotspotsToAdd)
 			{
 				if (!hotspots.ContainsKey(addedHotspot.node.Position) &&
-					// only process the addition if it hasn't already been done, which
-					// could happen if multiple things try to add a hotspot to the same tile
-					addedHotspot.node.Hotspot == null)
+				    // only process the addition if it hasn't already been done, which
+				    // could happen if multiple things try to add a hotspot to the same tile
+				    addedHotspot.node.Hotspot == null)
 				{
 					addedHotspot.node.Hotspot = addedHotspot;
-					hotspots.Add(addedHotspot.node.Position, addedHotspot.node);
+					hotspots.TryAdd(addedHotspot.node.Position, addedHotspot.node);
 					tileChangeManager.UpdateTile(
 						new Vector3Int(addedHotspot.node.Position.x, addedHotspot.node.Position.y, FIRE_FX_Z),
 						TileType.Effects, "Fire");
@@ -206,15 +162,15 @@ namespace Systems.Atmospherics
 			foreach (var removedHotspot in hotspotsToRemove)
 			{
 				if (hotspots.TryGetValue(removedHotspot, out var affectedNode) &&
-					// only process the removal if it hasn't already been done, which
-					// could happen if multiple things try to remove a hotspot to the same tile)
-					affectedNode.HasHotspot)
+				    // only process the removal if it hasn't already been done, which
+				    // could happen if multiple things try to remove a hotspot to the same tile)
+				    affectedNode.HasHotspot)
 				{
 					affectedNode.Hotspot = null;
 					tileChangeManager.RemoveTile(
 						new Vector3Int(affectedNode.Position.x, affectedNode.Position.y, FIRE_FX_Z),
 						LayerType.Effects, false);
-					hotspots.Remove(removedHotspot);
+					hotspots.TryRemove(removedHotspot, out var value);
 
 					if (!fireLightDictionary.ContainsKey(affectedNode.Position)) continue;
 
@@ -231,7 +187,58 @@ namespace Systems.Atmospherics
 
 			hotspotsToAdd.Clear();
 			hotspotsToRemove.Clear();
+
+			timePassed += Time.deltaTime;
+			if (timePassed < 0.5)
+			{
+				Profiler.EndSample();
+				return;
+			}
+
+			timePassed = 0;
+			reactionTick++;
+
+			//hotspot spread to adjacent tiles and damage
+			foreach (MetaDataNode node in hotspots.Values)
+			{
+				foreach (var neighbor in node.Neighbors)
+				{
+					if (neighbor != null)
+					{
+						ExposeHotspot(neighbor.Position);
+					}
+				}
+			}
+
 			Profiler.EndSample();
+		}
+
+
+		public void DoTick()
+		{
+			if (reactionTick == 0)
+			{
+				return;
+			}
+
+			reactionTick--;
+
+			//process the current hotspots, removing ones that can't sustain anymore.
+			//(but we actually perform the add / remove after this loop so we don't concurrently modify the dict)
+			foreach (MetaDataNode node in hotspots.Values)
+			{
+				if (node.Hotspot != null)
+				{
+					if (PlasmaFireReaction.CanHoldHotspot(node.GasMix))
+					{
+						node.Hotspot.Process();
+					}
+					else
+					{
+						RemoveHotspot(node);
+					}
+				}
+			}
 
 			Profiler.BeginSample("GasReactions");
 
@@ -244,7 +251,7 @@ namespace Systems.Atmospherics
 					{
 						var gasMix = addReactionNode.metaDataNode.GasMix;
 
-						addReactionNode.gasReaction.Reaction.React(ref gasMix, addReactionNode.metaDataNode.Position);
+						addReactionNode.gasReaction.Reaction.React(gasMix, addReactionNode.metaDataNode.Position, addReactionNode.metaDataNode.PositionMatrix);
 
 						if (reactions.TryGetValue(addReactionNode.metaDataNode.Position, out var gasHashSet) &&
 							gasHashSet.Count == 1)
@@ -325,18 +332,15 @@ namespace Systems.Atmospherics
 			Profiler.EndSample();
 
 			#endregion
-
-			timePassed = 0;
 		}
 
 		/// Same as ExposeHotspot but allows providing a world position and handles the conversion
-		public void ExposeHotspotWorldPosition(Vector2Int tileWorldPosition, float temperature, float volume)
+		public void ExposeHotspotWorldPosition(Vector2Int tileWorldPosition)
 		{
-			ExposeHotspot(MatrixManager.WorldToLocalInt(tileWorldPosition.To3Int(), MatrixManager.Get(matrix)), temperature,
-				volume);
+			ExposeHotspot(MatrixManager.WorldToLocalInt(tileWorldPosition.To3Int(), MatrixManager.Get(matrix)));
 		}
 
-		private void RemoveHotspot(MetaDataNode node)
+		public void RemoveHotspot(MetaDataNode node)
 		{
 			//removal will be processed later in update
 			hotspotsToRemove.Add(node.Position);
@@ -350,25 +354,19 @@ namespace Systems.Atmospherics
 			}
 		}
 
-		public void ExposeHotspot(Vector3Int localPosition, float temperature, float volume)
+		public void ExposeHotspot(Vector3Int localPosition)
 		{
-			if (hotspots.ContainsKey(localPosition) && hotspots[localPosition].Hotspot != null)
-			{
-				// TODO soh?
-				hotspots[localPosition].Hotspot.UpdateValues(volume * 25, temperature);
-			}
-			else
+			if (!hotspots.ContainsKey(localPosition) || hotspots[localPosition].Hotspot == null)
 			{
 				Profiler.BeginSample("MarkForAddition");
 				MetaDataNode node = metaDataLayer.Get(localPosition);
 				GasMix gasMix = node.GasMix;
 
-				if (gasMix.GetMoles(Gas.Plasma) > 0.5 && gasMix.GetMoles(Gas.Oxygen) > 0.5 &&
-					temperature > Reactions.PlasmaMaintainFire)
+				if (PlasmaFireReaction.CanHoldHotspot(gasMix))
 				{
 					// igniting
 					//addition will be done later in Update
-					hotspotsToAdd.Add(new Hotspot(node, temperature, volume * 25));
+					hotspotsToAdd.Add(new Hotspot(node));
 				}
 
 				Profiler.EndSample();

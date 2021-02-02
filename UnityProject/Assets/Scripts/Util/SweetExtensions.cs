@@ -6,6 +6,8 @@ using Mirror;
 using UnityEngine;
 using Objects;
 using Random = UnityEngine.Random;
+using System.Text;
+using Items;
 
 public static class SweetExtensions
 {
@@ -60,9 +62,9 @@ public static class SweetExtensions
 		}
 
 		var player = go.Player();
-		if (player != null && !String.IsNullOrWhiteSpace(player.Name))
+		if (player != null && !String.IsNullOrWhiteSpace(player.Script.visibleName))
 		{
-			return player.Name;
+			return player.Script.visibleName;
 		}
 
 		return go.name.Replace("NPC_", "").Replace("_", " ").Replace("(Clone)","");
@@ -347,6 +349,17 @@ public static class SweetExtensions
 	}
 
 	/// <summary>
+	/// Removes all KeyValuePairs where each pair matches the given predicate.
+	/// Courtesy of https://www.codeproject.com/Tips/494499/Implementing-Dictionary-RemoveAll.
+	/// </summary>
+	public static void RemoveAll<K, V>(this IDictionary<K, V> dict, Func<K, V, bool> match)
+	{
+		foreach (var key in dict.Keys.ToArray()
+				.Where(key => match(key, dict[key])))
+			dict.Remove(key);
+	}
+
+	/// <summary>
 	/// Enumerate all flags as IEnumerable
 	/// </summary>
 	/// <param name="input"></param>
@@ -368,5 +381,59 @@ public static class SweetExtensions
 			? v
 			: defaultValue;
 
+	}
+
+	/// <summary>
+	/// Removes the last instance of the given string from the given StringBuilder.
+	/// </summary>
+	/// <returns>the final StringBuilder</returns>
+	public static StringBuilder RemoveLast(this StringBuilder sb, string str)
+	{
+		if (sb.Length < 1) return sb;
+
+		sb.Remove(sb.ToString().LastIndexOf(str), str.Length);
+		return sb;
+	}
+
+	public static Vector3 GetRandomPoint(this Bounds bounds)
+	{
+		return new Vector3(
+			UnityEngine.Random.Range(bounds.min.x, bounds.max.x),
+			UnityEngine.Random.Range(bounds.min.y, bounds.max.y),
+			UnityEngine.Random.Range(bounds.min.z, bounds.max.z)
+		);
+	}
+
+	public static Vector3 GetRandomPoint(this BoundsInt bounds)
+	{
+		return new Vector3(
+			UnityEngine.Random.Range(bounds.min.x, bounds.max.x),
+			UnityEngine.Random.Range(bounds.min.y, bounds.max.y),
+			UnityEngine.Random.Range(bounds.min.z, bounds.max.z)
+		);
+	}
+
+	public static string Capitalize(this string text)
+	{
+		return text[0].ToString().ToUpper() + text.Substring(1);
+	}
+
+	/// <summary>
+	/// Extension for all IComparables, like numbers and dates. Returns true if given data
+	/// is between the min and max values. By default, it is inclusive.
+	/// </summary>
+	/// <param name="value">Value to compare</param>
+	/// <param name="min">Minimum value in the range</param>
+	/// <param name="max">Maximum value in the range</param>
+	/// <param name="inclusive">Changes the behavior for min and max, true by default</param>
+	/// <typeparam name="T"></typeparam>
+	/// <returns>True if the given value is  between the given range</returns>
+	public static bool IsBetween<T>(this T value, T min, T max, bool inclusive=true) where T : IComparable
+	{
+		return inclusive
+			? Comparer<T>.Default.Compare(value, min) >= 0
+			  && Comparer<T>.Default.Compare(value, max) <= 0
+			: Comparer<T>.Default.Compare(value, min) > 0
+			  && Comparer<T>.Default.Compare(value, max) < 0;
 	}
 }

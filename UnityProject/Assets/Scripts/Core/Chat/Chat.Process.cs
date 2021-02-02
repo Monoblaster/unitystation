@@ -20,7 +20,7 @@ public partial class Chat
 	private struct DestroyChatMessage
 	{
 		public string Message;
-		public Vector2Int WorldPosition;
+		public Vector2 WorldPosition;
 	}
 
 	public Color oocColor;
@@ -159,7 +159,7 @@ public partial class Chat
 	/// </summary>
 	/// <returns>The chat message, formatted to suit the chat log.</returns>
 	public static string ProcessMessageFurther(string message, string speaker, ChatChannel channels,
-		ChatModifier modifiers)
+		ChatModifier modifiers, bool stripTags = true)
 	{
 		//Skip everything if system message
 		if (channels.HasFlag(ChatChannel.System))
@@ -176,8 +176,7 @@ public partial class Chat
 		//Skip everything if it is an action or examine message or if it is a local message
 		//without a speaker (which is used by machines)
 		if (channels.HasFlag(ChatChannel.Examine) || channels.HasFlag(ChatChannel.Action)
-		                                          || channels.HasFlag(ChatChannel.Local) &&
-		                                          string.IsNullOrEmpty(speaker))
+			|| channels.HasFlag(ChatChannel.Local) && string.IsNullOrEmpty(speaker))
 		{
 			return AddMsgColor(channels, $"<i>{message}</i>");
 		}
@@ -188,7 +187,10 @@ public partial class Chat
 			return AddMsgColor(channels, $"<i>{message}</i>");
 		}
 
-		message = StripTags(message);
+		if (stripTags)
+		{
+			message = StripTags(message);
+		}
 
 		//Check for emote. If found skip chat modifiers, make sure emote is only in Local channel
 		if ((modifiers & ChatModifier.Emote) == ChatModifier.Emote)
@@ -208,7 +210,6 @@ public partial class Chat
 			{
 				name = "nerd";
 			}
-
 			message = AddMsgColor(channels, $"[ooc] <b>{speaker}: {message}</b>");
 			return message;
 		}
@@ -219,7 +220,6 @@ public partial class Chat
 			string[] _ghostVerbs = {"cries", "moans"};
 			return AddMsgColor(channels, $"[dead] <b>{speaker}</b> {_ghostVerbs.PickRandom()}: {message}");
 		}
-
 		string verb = "says,";
 
 		if ((modifiers & ChatModifier.Mute) == ChatModifier.Mute)
@@ -248,7 +248,7 @@ public partial class Chat
 		}
 		else if ((modifiers & ChatModifier.ColdlyState) == ChatModifier.ColdlyState)
 		{
-			verb = "coldly states,";
+			verb = " coldly states,";
 		}
 		else if (message.EndsWith("!"))
 		{
@@ -272,7 +272,7 @@ public partial class Chat
 		}
 
 		return AddMsgColor(channels,
-			$"{chan}<b>{speaker}</b> {verb}" // [cmd] Username says,
+			$"{chan}<b>{speaker}</b> {verb}" // [cmd]  Username says,
 			+ "  " // Two hair spaces. This triggers Text-to-Speech.
 			+ "\"" + message + "\""); // "This text will be spoken by TTS!"
 	}
@@ -356,7 +356,7 @@ public partial class Chat
 
 //			int averageX = 0;
 //			int averageY = 0;
-			Vector2Int lastPos = Vector2Int.zero;
+			var lastPos = Vector2.zero;
 			int count = 1;
 
 			while (messageQueue.TryDequeue(out DestroyChatMessage msg))
@@ -382,24 +382,26 @@ public partial class Chat
 	/// This should only be called via UpdateChatMessage
 	/// on the client. Do not use for anything else!
 	/// </summary>
-	public static void ProcessUpdateChatMessage(uint recipient, uint originator, string message,
-		string messageOthers, ChatChannel channels, ChatModifier modifiers, string speaker)
+	public static void ProcessUpdateChatMessage(uint recipientUint, uint originatorUint, string message,
+		string messageOthers, ChatChannel channels, ChatModifier modifiers, string speaker, GameObject recipient, bool stripTags = true)
 	{
-		//If there is a message in MessageOthers then determine
-		//if it should be the main message or not.
-		if (!string.IsNullOrEmpty(messageOthers))
+
+		var isOriginator = true;
+		if (recipientUint != originatorUint)
 		{
-			//This is not the originator so use the messageOthers
-			if (recipient != originator)
+			isOriginator = false;
+			if (!string.IsNullOrEmpty(messageOthers))
 			{
+				//If there is a message in MessageOthers then determine
+				//if it should be the main message or not.
 				message = messageOthers;
 			}
 		}
 
-		if (GhostValidationRejection(originator, channels)) return;
+		if (GhostValidationRejection(originatorUint, channels)) return;
 
-		var msg = ProcessMessageFurther(message, speaker, channels, modifiers);
-		Instance.addChatLogClient.Invoke(msg, channels);
+		var msg = ProcessMessageFurther(message, speaker, channels, modifiers, stripTags);
+		ChatRelay.Instance.UpdateClientChat(msg, channels, isOriginator, recipient);
 	}
 
 	private static bool GhostValidationRejection(uint originator, ChatChannel channels)

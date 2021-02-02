@@ -13,40 +13,40 @@ namespace UI.Objects.Atmospherics
 {
 	public class GUI_PipeDispenser : NetTab
 	{
-#pragma warning disable 0649
-		[SerializeField] NetPageSwitcher categorySwitcher;
-		[SerializeField] NetPageSwitcher dispensePageSwitcher;
+		[SerializeField] private NetPageSwitcher categorySwitcher = default;
+		[SerializeField] private NetPageSwitcher dispensePageSwitcher = default;
 
-		[SerializeField] List<NetToggle> layerToggles;
-		[SerializeField] List<NetToggle> colorToggles;
-		[SerializeField] List<NetPage> categoryPages;
-#pragma warning restore 0649
+		[SerializeField] private List<NetToggle> layerToggles = default;
+		[SerializeField] private List<NetToggle> colorToggles = default;
+		[SerializeField] private List<NetPage> categoryPages = default;
+		[SerializeField] private List<Color> colors = default;
 
-		int currentCategoryNumber = 0;
-		int[] previousCategoryPages;
+		private int currentCategoryNumber = 0;
+		private int[] previousCategoryPages;
 
-		PipeDispenser.PipeLayer pipeLayer = PipeDispenser.PipeLayer.LayerTwo;
-		Color pipeColor = Color.white;
+		private PipeDispenser.PipeLayer pipeLayer = PipeDispenser.PipeLayer.LayerTwo;
+		private Color pipeColor;
 
-		PipeDispenser pipeDispenser;
+		private PipeDispenser pipeDispenser;
 
 		#region Initialisation
 
 		private void Awake()
 		{
+			pipeColor = colors[0];
 			// This assumes that each category page has only the toggles for children
 			// and that the dispensePages are sequential with accordance to category.
 			previousCategoryPages = new int[]
 			{
-			0,
-			categoryPages[0].transform.childCount,
-			categoryPages[0].transform.childCount + categoryPages[1].transform.childCount
+				0,
+				categoryPages[0].transform.childCount,
+				categoryPages[0].transform.childCount + categoryPages[1].transform.childCount
 			};
 
 			StartCoroutine(WaitForProvider());
 		}
 
-		IEnumerator WaitForProvider()
+		private IEnumerator WaitForProvider()
 		{
 			while (Provider == null)
 			{
@@ -58,7 +58,7 @@ namespace UI.Objects.Atmospherics
 
 		#endregion Initialisation
 
-		void EnableToggles(IEnumerable<NetToggle> toggles)
+		private void EnableToggles(IEnumerable<NetToggle> toggles)
 		{
 			foreach (NetToggle toggle in toggles)
 			{
@@ -66,7 +66,7 @@ namespace UI.Objects.Atmospherics
 			}
 		}
 
-		void DisableToggles(IEnumerable<NetToggle> toggles)
+		private void DisableToggles(IEnumerable<NetToggle> toggles)
 		{
 			foreach (NetToggle toggle in toggles)
 			{
@@ -74,13 +74,13 @@ namespace UI.Objects.Atmospherics
 			}
 		}
 
-		void EnableLayerAndColorToggles()
+		private void EnableLayerAndColorToggles()
 		{
 			EnableToggles(layerToggles);
 			EnableToggles(colorToggles);
 		}
 
-		void DisableLayerAndColorToggles()
+		private void DisableLayerAndColorToggles()
 		{
 			layerToggles[1].SetValueServer("1"); // Engage the toggle of Layer 2.
 			colorToggles[0].SetValueServer("1"); // Engage the toggle of Color Grey.
@@ -88,23 +88,12 @@ namespace UI.Objects.Atmospherics
 			DisableToggles(colorToggles);
 		}
 
-		Color GetColorFromNumber(int colorNumber)
+		private Color GetColorFromNumber(int colorNumber)
 		{
-			// These colors may need tweaking, as the objects are usually already
-			// dark in nature and so may end up a bit darker than anticipated.
-			switch (colorNumber)
-			{
-				case 0: return Color.white;
-				case 1: return Color.red;
-				case 2: return Color.green;
-				case 3: return Color.blue;
-				case 4: return Color.yellow;
-				case 5: return Color.cyan;
-				default: return Color.grey;
-			}
+			return colors[colorNumber];
 		}
 
-		PipeDispenser.PipeLayer GetLayerFromNumber(int layerNumber)
+		private PipeDispenser.PipeLayer GetLayerFromNumber(int layerNumber)
 		{
 			switch (layerNumber)
 			{
